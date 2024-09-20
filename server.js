@@ -1,6 +1,6 @@
 const express = require('express');
 const dotenv = require('dotenv');
-const db = require('./config/db');
+const appService = require('./services/appService');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -8,16 +8,7 @@ dotenv.config();
 // Initialize express app
 const app = express();
 app.use(express.json());  // Parse JSON request bodies
-
-app.get('/test-db', async (req, res) => {
-    try {
-        const [rows] = await db.query('SELECT * FROM customer');
-        res.json(rows);
-    } catch (err) {
-        console.error('Error quering the database: ', err);
-        res.status(500).json({ error: 'Error querying the database' });
-    }
-});
+app.use(appService);  // Use the appService routes
 
 // Set up port from environment variables or default to 5000
 const PORT = process.env.PORT || 5000;
