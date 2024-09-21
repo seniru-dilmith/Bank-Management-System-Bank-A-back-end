@@ -304,11 +304,11 @@ VALUES
 -- Insert customers
 INSERT INTO `customer` (`nic`, `customer_type_id`, `first_name`, `last_name`, `address`, `phone`, `email`, `username`, `password`, `date_of_birth`)
 VALUES 
-('123456789V', 1, 'Alice', 'Smith', '456 Elm St', '011-555-1234', 'alice@example.com', 'alice01', 'password123', '2010-04-15'), -- Children
-('987654321V', 1, 'John', 'Doe', '789 Oak St', '011-555-5678', 'john@example.com', 'john01', 'password456', '2005-09-25'), -- Teen
-('543216789V', 1, 'Sam', 'Adams', '789 Pine St', '011-555-9876', 'sam@example.com', 'samadams', 'password123', '1975-11-30'), -- Adult
-('321654987V', 1, 'Elder', 'John', '1010 Maple St', '011-555-0001', 'elderjohn@example.com', 'elderjohn', 'password123', '1955-03-10'), -- Senior
-('852963741V', 2, 'XYZ Corp', 'Ltd', '22 Corporate Ave', '011-555-9876', 'xyzcorp@example.com', 'xyzcorp', 'securepass', '1985-06-10'); -- Organization
+('123456789V', 1, 'Alice', 'Smith', '456 Elm St', '011-555-1234', 'alice@example.com', 'alice01', '$2a$10$r997wlXuZyphF2FmjVKleesT7557JQqbFEJMdMXjjFogPSvz2MQhG', '2010-04-15'), -- Children pass: password123
+('987654321V', 1, 'John', 'Doe', '789 Oak St', '011-555-5678', 'john@example.com', 'john01', '$2a$10$gLl8smHkhUK7xNpAXh62Vut9tt9I8TnwoWePLSdtmiuCAeU0.Goqu', '2005-09-25'), -- Teen pass: password456
+('543216789V', 1, 'Sam', 'Adams', '789 Pine St', '011-555-9876', 'sam@example.com', 'samadams', '$2a$10$DsMGDeS3a/OdcuC59CxkoegWaloDv5hNiquW/pwv7LBmXUYcGb1Ee', '1975-11-30'), -- Adult pass: password789
+('321654987V', 1, 'Elder', 'John', '1010 Maple St', '011-555-0001', 'elderjohn@example.com', 'elderjohn', '$2a$10$oeE4rvCaCldkxBMcrGRJrOc2yxJEbRN7kxWIk8d.Herty1xMSfkje', '1955-03-10'), -- Senior pass: password321
+('852963741V', 2, 'XYZ Corp', 'Ltd', '22 Corporate Ave', '011-555-9876', 'xyzcorp@example.com', 'xyzcorp', '$2a$10$X1aSzbnckesYHrGObXSbReMtWNusBTLGbycKg/wtNzEIK7P6rH8me', '1985-06-10'); -- Organization pass: securepass
 
 -- Insert loan types (Online loans do not require approval)
 INSERT INTO `loan_type` (`type_name`, `is_online`, `description`)
@@ -371,9 +371,9 @@ VALUES
 -- Insert employees
 INSERT INTO `employee` (`first_name`, `last_name`, `phone`, `nic`, `email`, `username`, `password`, `position_id`)
 VALUES 
-('Alice', 'Johnson', '011-555-6789', '567890123V', 'alice@example.com', 'alicejohnson', 'password123', 1),
-('Bob', 'Williams', '011-555-1122', '987654321V', 'bob@example.com', 'bobwilliams', 'password123', 2),
-('Charlie', 'Brown', '011-555-3344', '741258963V', 'charlie@example.com', 'charlieb', 'password123', 3);
+('Alice', 'Johnson', '011-555-6789', '567890123V', 'alice@example.com', 'alicejohnson', '$2a$10$tWgWrL7bN.ANQ9juU.xqvOHAD0NKVWxJHZ9YZm.t0slDwugdloMNu', 1), -- password123
+('Bob', 'Williams', '011-555-1122', '987654321V', 'bob@example.com', 'bobwilliams', '$2a$10$H6QV5evVjJR2gAhYnE.lPuiNmTtywxdyTRjDT9IlSKEJg4KOVqkDe', 2), -- password456
+('Charlie', 'Brown', '011-555-3344', '741258963V', 'charlie@example.com', 'charlieb', '$2a$10$sUn8SVOxellftkH0a0dMBemma51jTejDtCY.PzEzs2lfV4fRdmiqq', 3); -- password789
 
 -- Insert managers and employees related to branches
 INSERT INTO `manager_employee` (`manager_id`, `branch_id`)

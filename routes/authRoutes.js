@@ -1,7 +1,10 @@
 const express = require('express');
-const router = express.Router();
 const { login } = require('../controllers/authController');
+const { loginValidation } = require('../validations/authValidation')
 
-router.post('/login', login);
+const router = express.Router(); // Initialize express router
+
+// Route to login a user
+router.post('/login', loginValidation, login);
 
 module.exports = router;
