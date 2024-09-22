@@ -3,6 +3,7 @@ const { validationResult } = require('express-validator');
 const { generateToken } = require('../utils/tokenUtil');
 const db = require('../config/db');
 
+// Login a user
 exports.login = async (req, res) => {
     const { username, password } = req.body;
 
@@ -53,4 +54,37 @@ exports.login = async (req, res) => {
         res.status(500).json({ msg: 'server failed during query' });
     }
 
+}
+
+// Change password
+exports.changePassword = async (req, res) => {
+    const {oldPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    //validating input
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+        let userTable = req.user.userType === 'employee' ? 'employee' : 'customer';
+        const [userRessults] = await db.query(`SELECT * FROM ${userTable} WHERE id = ?`, [userId]);
+
+        const user = userRessults[0];
+
+        const isMatched = await bcrypt.compare(oldPassword, user.password);
+        if(!isMatched) {
+            return res.status(400).json({ msg: 'invalid current password' });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        await db.query(`UPDATE ${userTable} SET password = ? WHERE id = ?`, [hashedPassword, userId]);
+
+        return res.json({ msg: 'pssword updated successfully'});
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ msg: 'server failed during password update query' });
+    }
 }
