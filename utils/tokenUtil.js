@@ -18,7 +18,6 @@ exports.generateToken = (user) => {
     );
 };
 
-
 // Verify a JWT token   
 exports.verifyToken = (token) => {
     return jwt.verify(token, process.env.JWT_SECRET);  // Verify the token using the secret key

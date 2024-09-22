@@ -58,7 +58,7 @@ exports.login = async (req, res) => {
 
 // Change password
 exports.changePassword = async (req, res) => {
-    const {oldPassword, newPassword } = req.body;
+    const { oldPassword, newPassword } = req.body;
     const userId = req.user.id;
 
     //validating input
@@ -68,17 +68,17 @@ exports.changePassword = async (req, res) => {
     }
 
     try {
-        let userTable = req.user.userType === 'employee' ? 'employee' : 'customer';
-        const [userRessults] = await db.query(`SELECT * FROM ${userTable} WHERE id = ?`, [userId]);
+        let userTable = req.user.userType === 'employee' ? 'employee' : 'customer';  // Get the user table based on the user type
+        const [userResults] = await db.query(`SELECT * FROM ${userTable} WHERE id = ?`, [userId]);
 
-        const user = userRessults[0];
+        const user = userResults[0];
 
-        const isMatched = await bcrypt.compare(oldPassword, user.password);
+        const isMatched = await bcrypt.compare(oldPassword, user.password);  // Compare the current password with the password in the database
         if(!isMatched) {
             return res.status(400).json({ msg: 'invalid current password' });
         }
 
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        const hashedPassword = await bcrypt.hash(newPassword, 10);  // Hash the new password
 
         await db.query(`UPDATE ${userTable} SET password = ? WHERE id = ?`, [hashedPassword, userId]);
 
