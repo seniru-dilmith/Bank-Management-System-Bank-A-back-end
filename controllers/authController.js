@@ -88,3 +88,30 @@ exports.changePassword = async (req, res) => {
         res.status(500).json({ msg: 'server failed during password update query' });
     }
 }
+
+// Change name
+exports.changeName = async (req, res) => {
+    const { newName } = req.body;
+    const userId = req.user.id;  // user from jwt token
+
+    const errors = validationResult(req);
+
+    if(!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+        const nameParts = newName.split(' '); // Split the name 
+
+        const firstName = nameParts[0];
+        const lastName = nameParts.slice(1).join(' ');  // Get the last name from concatenating the rest of the parts
+
+        let userTable = req.user.userType === 'employee' ? 'employee' : 'customer';  // Get the user table based on the user type
+        await db.query(`UPDATE ${userTable} SET first_name = ?, last_name= ? WHERE id = ?`, [firstName, lastName, userId]);
+
+        return res.json({ msg: 'name updated successfully' });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ msg: 'server failed during name update query' });
+    }
+}
