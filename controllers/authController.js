@@ -94,7 +94,7 @@ exports.changeName = async (req, res) => {
     const { newName } = req.body;
     const userId = req.user.id;  // user from jwt token
 
-    const errors = validationResult(req);
+    const errors = validationResult(req);  // Validate the input
 
     if(!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -113,5 +113,26 @@ exports.changeName = async (req, res) => {
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'server failed during name update query' });
+    }
+}
+
+exports.changeAddress = async (req, res) => {
+    const { newAddress } = req.body;
+    const userId = req.user.id; // user from jwt token
+
+    const errors = validationResult(req);  // Validate the input
+
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+        let userTable = req.user.userType === 'employee' ? 'employee' : 'customer'; // Get the user table based on the user type
+        await db.query(`UPDATE ${userTable} SET address = ? WHERE id = ?`, [newAddress, userId]);
+
+        return res.json({ msg: 'address updated successfully' });
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).json({ msg: 'server failed during address update query' });
     }
 }

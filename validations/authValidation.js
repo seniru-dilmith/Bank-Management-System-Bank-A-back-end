@@ -1,4 +1,4 @@
-const { check, body } = require('express-validator');
+const { check } = require('express-validator');
 
 // Validation for login
 exports.loginValidation = [
@@ -16,4 +16,8 @@ exports.changePasswordValidation = [
 exports.changeNameValidation = [
     check('newName', 'new name is required').not().isEmpty(),
     check('confirmNewName', 'confirm name is required').not().isEmpty(),
-]
+];
+
+exports.changeAddressValidation = [
+    check('newAddress', 'address is required').not().isEmpty(),
+];

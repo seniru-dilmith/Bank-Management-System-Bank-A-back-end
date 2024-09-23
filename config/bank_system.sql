@@ -145,6 +145,7 @@ CREATE TABLE `employee` (
   `id` INT AUTO_INCREMENT,
   `first_name` VARCHAR(255),
   `last_name` VARCHAR(255),
+  `address` VARCHAR(255),
   `phone` VARCHAR(50),
   `nic` VARCHAR(12),
   `email` VARCHAR(255),
@@ -166,7 +167,7 @@ CREATE TABLE `manager_employee` (
 CREATE TABLE `general_employee` (
   `employee_id` INT,
   `branch_id` INT,
-  `branch_manager_id` INT,
+  `supervisor_id` INT,
   PRIMARY KEY (`employee_id`)
 );
 
@@ -251,7 +252,7 @@ ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE `general_employee`
 ADD FOREIGN KEY (`branch_id`) REFERENCES `branch`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE,
-ADD FOREIGN KEY (`branch_manager_id`) REFERENCES `manager_employee`(`manager_id`)
+ADD FOREIGN KEY (`supervisor_id`) REFERENCES `employee`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Add foreign key relationships to report table
@@ -366,27 +367,53 @@ INSERT INTO `position` (`name`, `available_action_id`, `description`)
 VALUES 
 ('Branch Manager', 1, 'Manager overseeing branch operations'),
 ('Teller', 2, 'Responsible for day-to-day transactions'),
-('Loan Officer', 3, 'Handles loan applications and approvals');
+('Loan Officer', 3, 'Handles loan applications and approvals'),
+('Security Officer', 4, 'Responsible for security and safety of the branch'),
+('Operations Manager', 5, 'Responsible for overall operations management');
 
 -- Insert employees
-INSERT INTO `employee` (`first_name`, `last_name`, `phone`, `nic`, `email`, `username`, `password`, `position_id`)
+INSERT INTO `employee` (`first_name`, `last_name`, `address`, `phone`, `nic`, `email`, `username`, `password`, `position_id`)
 VALUES 
-('Alice', 'Johnson', '011-555-6789', '567890123V', 'alice@example.com', 'alicejohnson', '$2a$10$tWgWrL7bN.ANQ9juU.xqvOHAD0NKVWxJHZ9YZm.t0slDwugdloMNu', 1), -- password123
-('Bob', 'Williams', '011-555-1122', '987654321V', 'bob@example.com', 'bobwilliams', '$2a$10$H6QV5evVjJR2gAhYnE.lPuiNmTtywxdyTRjDT9IlSKEJg4KOVqkDe', 2), -- password456
-('Charlie', 'Brown', '011-555-3344', '741258963V', 'charlie@example.com', 'charlieb', '$2a$10$sUn8SVOxellftkH0a0dMBemma51jTejDtCY.PzEzs2lfV4fRdmiqq', 3); -- password789
+-- Managers (5 managers, one per branch)
+('Alice', 'Johnson', '101 Lakeview Rd, Hilltown', '011-555-6789', '567890123V', 'alice@example.com', 'alicejohnson', '$2a$10$AZUi6ySP0oW1VoNnPkRjnuqixJZd6Kf8d5WznprxoNN4oYaZFA9mS', 1), -- Manager of Head Office -- pass: password123
+('Bob', 'Williams', '250 Oakwood Dr, Greenfield', '011-555-1122', '987654321V', 'bob@example.com', 'bobwilliams', '$2a$10$mBkCUg3kSI.jR1WfcJPZjORiuQmM3YdMKjZuPnTLUXasmMp67lxiO', 1), -- Manager of North Branch  -- pass: password456
+('Charlie', 'Brown', '762 Cedar Ave, Roseville', '011-555-3344', '741258963V', 'charlie@example.com', 'charlieb', '$2a$10$tNjDCIrYTYpvNC.pOFOnUOUzqDN2GyM1Yek6ioVLC5ok5cvAOubWu', 1), -- Manager of South Branch  -- pass: password789
+('Diana', 'Smith', '333 Birch Ln, Maple Grove', '011-555-2233', '852741963V', 'diana@example.com', 'dianasmith', '$2a$10$dpvMriQ6oC20lvisTqVAlOsq2bYzbWOA5vBoWVnn1oh1XF95GIEUe', 1), -- Manager of East Branch  -- pass: password321
+('Edward', 'Johnson', '890 Pine Ridge St, Brookfield', '011-555-6677', '963258741V', 'edward@example.com', 'edwardjohnson', '$2a$10$akFR0k9YwkB1i8Go/xTfGuuizdEo3AIF.m7HKpyiHn9vbMCyBXhAy', 1), -- Manager of West Branch  -- pass: password654
+
+-- General Employees (10 employees in total)
+('Frank', 'White', '445 Aspen Ct, Silver Springs', '011-555-4455', '951753486V', 'frank@example.com', 'frankwhite', '$2a$10$AYq3gUc7hokkAaTlBgSCE.APRHc1YVbXXotYqgZqQbxBVun/8e3be', 2), -- Teller  -- password111
+('George', 'Adams', '567 Willow St, Elmwood', '011-555-8899', '789654123V', 'george@example.com', 'georgeadams', '$2a$10$7KS5PwgeLvmrrEzT8SggpeSNO8l3VZxqprG.NHmYBJrvbIIVA2glm', 2), -- Teller  -- password222
+('Henry', 'Miller', '789 Spruce Hill Rd, Sunnydale', '011-555-5566', '852456789V', 'henry@example.com', 'henrymiller', '$2a$10$29wqYcZodno6mit/hc2XNer.VvwG.4i5EpHto4krKNKLFewrX8NbG', 2), -- Teller  -- password333
+('Ivy', 'Brown', '120 Forest Creek Dr, Pinewood', '011-555-7788', '963741852V', 'ivy@example.com', 'ivybrown', '$2a$10$Oi1kd0WAEo5SikWuBYD30.1AoAnGtrzaStGEhI.MgvMjsaNElvmBO', 3), -- Loan Officer -- password444
+('Jack', 'Smith', '982 Magnolia Dr, Riverdale', '011-555-3344', '147258369V', 'jack@example.com', 'jacksmith', '$2a$10$.Z9FeGcSPUytEjSD5G6hEeqsjGj1VtlhXEEE0V0R2i54SRC5/XNyC', 3), -- Loan Officer -- password555
+('Kate', 'Moore', '348 Evergreen Blvd, Stonebridge', '011-555-9911', '654321789V', 'kate@example.com', 'katemoore', '$2a$10$o4Fif.wvnuTQRsHY58VQ5OzeXt8yccLo7XEbufR9xRBCiDlKs1Mde', 2), -- Teller -- password666
+('Liam', 'Stone', '576 Cherry Blossom Ln, Kingsport', '011-555-2277', '321654987V', 'liam@example.com', 'liamstone', '$2a$10$VLbACW1gEyqxY6UMLGucXe6aX0eV/DR9Wsl2aVqRqtVk9lG2qyR3i', 2), -- Teller -- password777
+('Michael', 'Parker', '823 Redwood St, Palm Beach', '011-555-4477', '741852963V', 'michael@example.com', 'michaelparker', '$2a$10$kd0N175zLRVxVRES04EaCuMe8eGb5QVMhoN.ZwKK99HuAD/FVCGbC', 4), -- Security Officer -- password888
+('Nancy', 'Davis', '104 Mountain View Ave, Clearbrook', '011-555-5599', '963258147V', 'nancy@example.com', 'nancydavis', '$2a$10$TLKZvY/fyl8Dr.njG0CZ3emI2R9LMDLFcryEfjDcHuFSMyGbETkRO', 4), -- Security Officer -- password999
+('Oscar', 'Wright', '679 Gardenia Ln, Meadowbrook', '011-555-6622', '258741963V', 'oscar@example.com', 'oscarwright', '$2a$10$IBN3Lxv6d31aCSxLR0mWUu6d/KndlqsQas9v66CFrpobEMXqNAl4O', 5); -- Operations Manager -- password000
 
 -- Insert managers and employees related to branches
 INSERT INTO `manager_employee` (`manager_id`, `branch_id`)
 VALUES 
 (1, 1), -- Manager of Head Office
 (2, 2), -- Manager of North Branch
-(3, 3); -- Manager of South Branch
+(3, 3), -- Manager of South Branch
+(4, 4), -- Manager of East Branch
+(5, 5); -- Manager of West Branch
 
-INSERT INTO `general_employee` (`employee_id`, `branch_id`, `branch_manager_id`)
+INSERT INTO `general_employee` (`employee_id`, `branch_id`, `supervisor_id`)
 VALUES 
-(1, 1, 1), -- Employee 1 at Head Office under Manager 1
-(2, 2, 2), -- Employee 2 at North Branch under Manager 2
-(3, 3, 3); -- Employee 3 at South Branch under Manager 3
+(6, 1, 1), -- General Employee 6 at Head Office under Head Office Manager
+(7, 2, 2), -- General Employee 7 at North Branch under North Branch Manager
+(8, 3, 3), -- General Employee 8 at South Branch under South Branch Manager
+(9, 4, 4), -- General Employee 9 at East Branch under East Branch Manager
+(10, 5, 5), -- General Employee 10 at West Branch under West Branch Manager
+(11, 1, 6), -- General Employee 11 at Head Office under Supervisor 6
+(12, 2, 7), -- General Employee 12 at North Branch under Supervisor 7
+(13, 3, 8), -- General Employee 13 at South Branch under Supervisor 8
+(14, 4, 9), -- General Employee 14 at East Branch under Supervisor 9
+(15, 5, 10); -- General Employee 15 at West Branch under Supervisor 10
 
 -- Insert reports into the report table
 INSERT INTO `report` (`id`, `branch_id`, `report_date`)
