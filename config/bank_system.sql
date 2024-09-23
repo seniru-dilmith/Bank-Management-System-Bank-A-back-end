@@ -60,13 +60,13 @@ CREATE TABLE `loan` (
   `id` INT AUTO_INCREMENT,
   `type_id` INT,
   `customer_id` INT,
-  `fixed_deposit_id` INT,
+  `fixed_deposit_id` INT NULL,
+  `branch_id` INT,
   `status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
   `loan_amount` DECIMAL(15,2),
   `loan_term` INT,
   `interest_rate` DECIMAL(4,2),
   `start_date` DATE,
-  `end_date` DATE,
   PRIMARY KEY (`id`)
 );
 
@@ -85,8 +85,9 @@ CREATE TABLE `account` (
 CREATE TABLE `loan_installment` (
   `id` INT AUTO_INCREMENT,
   `loan_id` INT,
-  `is_paid` BOOLEAN,
-  `due_date` DATE,
+  `installment_amount` DECIMAL(15,2),
+  `paid` DECIMAL(15,2),
+  `next_due_date` DATE,
   PRIMARY KEY (`id`)
 );
 
@@ -206,6 +207,8 @@ ALTER TABLE `loan`
 ADD FOREIGN KEY (`customer_id`) REFERENCES `customer`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE,
 ADD FOREIGN KEY (`type_id`) REFERENCES `loan_type`(`id`)
+ON DELETE CASCADE ON UPDATE CASCADE,
+ADD FOREIGN KEY (`branch_id`) REFERENCES `branch`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Add foreign key relationships to account table
@@ -274,6 +277,143 @@ ON DELETE CASCADE ON UPDATE CASCADE,
 ADD FOREIGN KEY (`transaction_id`) REFERENCES `transaction`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
+-- triggers and stored procedures
+
+-- Trigger to generate loan installments after loan approval
+DELIMITER $$
+
+CREATE TRIGGER generate_loan_installments
+AFTER INSERT ON `loan`
+FOR EACH ROW
+BEGIN
+  DECLARE num_installments INT;
+  DECLARE monthly_payment DECIMAL(15,2);
+  DECLARE total_amount DECIMAL(15,2);
+  DECLARE installment_due_date DATE;
+  DECLARE monthly_interest_rate DECIMAL(4,2);
+  DECLARE next_due_date DATE;
+
+  -- Only generate installments if the loan is approved
+  IF NEW.status = 'approved' THEN
+    -- Calculate the monthly interest rate from the annual interest rate
+    SET monthly_interest_rate = NEW.interest_rate / 12;
+
+    -- Calculate the total loan amount (Principal + Monthly interest over loan term)
+    SET total_amount = NEW.loan_amount + (NEW.loan_amount * monthly_interest_rate / 100 * NEW.loan_term);
+
+    -- Calculate the monthly installment amount
+    SET monthly_payment = total_amount / NEW.loan_term;
+
+    -- Set number of installments (loan_term is already in months)
+    SET num_installments = NEW.loan_term;
+
+    -- Set the first installment due date (1 month after the loan application start date)
+    SET installment_due_date = DATE_ADD(NEW.start_date, INTERVAL 1 MONTH);
+
+    -- Generate loan installments for each month
+    WHILE num_installments > 0 DO
+      -- If this is the last installment, set next_due_date to NULL
+      IF num_installments = 1 THEN
+        SET next_due_date = NULL;
+      ELSE
+        -- Set next installment's due date (1 month after the current installment)
+        SET next_due_date = DATE_ADD(installment_due_date, INTERVAL 1 MONTH);
+      END IF;
+
+      -- Insert the installment with the calculated due date and next due date
+      INSERT INTO loan_installment (loan_id, installment_amount, paid, next_due_date)
+      VALUES (NEW.id, monthly_payment, 0, next_due_date);
+
+      -- Update the installment_due_date for the next iteration
+      SET installment_due_date = next_due_date;
+
+      -- Decrease the number of remaining installments
+      SET num_installments = num_installments - 1;
+    END WHILE;
+  END IF;
+END $$
+
+DELIMITER ;
+
+-- stored procedure to get total transactions for a specific branch
+DELIMITER $$
+
+CREATE PROCEDURE `branch_wise_total_transactions`(IN branchId INT)
+BEGIN
+  SELECT a.branch_id, SUM(t.amount) AS total_transactions
+  FROM transaction t
+  JOIN account a ON t.from_account_id = a.id OR t.to_account_id = a.id
+  WHERE a.branch_id = branchId
+  GROUP BY a.branch_id;
+END $$
+
+DELIMITER ;
+
+-- stored procedure to get branch wise late installments
+DELIMITER $$
+
+CREATE PROCEDURE `branch_wise_late_installments`(IN branchId INT)
+BEGIN
+  SELECT l.id AS loan_id, c.first_name, c.last_name, li.next_due_date, li.installment_amount, li.paid
+  FROM loan l
+  JOIN loan_installment li ON l.id = li.loan_id
+  JOIN customer c ON l.customer_id = c.id
+  WHERE c.branch_id = branchId
+    AND li.next_due_date < CURDATE()
+    AND li.paid = 0;
+END $$
+
+DELIMITER ;
+
+-- Trigger for Online Loan Based on FD
+DELIMITER $$
+
+CREATE TRIGGER process_online_loan
+AFTER UPDATE ON `loan`
+FOR EACH ROW
+BEGIN
+  DECLARE fd_amount DECIMAL(15,2);
+  DECLARE max_loan_amount_by_fd DECIMAL(15,2);
+  DECLARE deposit_amount DECIMAL(15,2);
+  DECLARE fd_account_id INT;
+  DECLARE savings_account_id INT;
+  DECLARE online_loan_limit DECIMAL(15,2) DEFAULT 500000;
+
+  -- Check if the loan is an online loan and doesn't require approval
+  IF NEW.status = 'approved' AND NEW.fixed_deposit_id IS NOT NULL AND NEW.type_id = (
+      SELECT id FROM loan_type WHERE is_online = TRUE LIMIT 1) THEN
+
+    -- Get the FD amount and associated savings account bound to the FD
+    SELECT amount, account_id INTO fd_amount, fd_account_id
+    FROM fixed_deposit
+    WHERE id = NEW.fixed_deposit_id;
+
+    -- Calculate the maximum allowed loan amount (60% of FD with upper limit)
+    SET max_loan_amount_by_fd = CAST(fd_amount * 0.60 AS DECIMAL(15,2));
+
+    -- Ensure the requested loan amount is within the allowed limit
+    IF NEW.loan_amount <= max_loan_amount_by_fd AND NEW.loan_amount <= online_loan_limit THEN
+      -- Find the savings account bound to the fixed deposit
+      SELECT id INTO savings_account_id
+      FROM account
+      WHERE customer_id = NEW.customer_id AND account_type_id = (
+          SELECT id FROM account_type WHERE name LIKE 'Savings%' LIMIT 1);
+
+      -- Deposit the loan amount into the savings account
+      UPDATE account
+      SET acc_balance = acc_balance + NEW.loan_amount
+      WHERE id = savings_account_id;
+      
+    ELSE
+      -- If the requested loan exceeds the maximum limit, raise an error
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Requested loan exceeds the maximum allowed loan limit based on the FD amount';
+    END IF;
+
+  END IF;
+END $$
+
+DELIMITER ;
+
 -- Sample Data Insertions
 
 -- Insert account types (Savings and Fixed Deposit)
@@ -319,11 +459,21 @@ VALUES
 ('Online Loan', TRUE, 'Instant loan through online application');
 
 -- Insert loans
-INSERT INTO `loan` (`type_id`, `customer_id`, `fixed_deposit_id`, `status`, `loan_amount`, `loan_term`, `interest_rate`, `start_date`, `end_date`)
+INSERT INTO `loan` 
+(`type_id`, `customer_id`, `fixed_deposit_id`, `branch_id`, `status`, `loan_amount`, `loan_term`, `interest_rate`, `start_date`)
 VALUES 
-(1, 1, NULL, 'pending', 50000.00, 15, 5.50, '2024-01-01', '2039-01-01'),
-(2, 2, NULL, 'approved', 20000.00, 5, 3.00, '2024-01-01', '2029-01-01'),
-(3, 3, NULL, 'approved', 10000.00, 1, 6.00, '2024-01-01', '2025-01-01'); -- Online loan
+-- Approved loans (including an online loan)
+(1, 1, NULL, 1, 'approved', 50000.00, 15, 5.50, '2024-10-05'),  -- Business loan from Head Office
+(2, 2, NULL, 2, 'approved', 20000.00, 6, 3.00, '2024-10-08'),  -- Personal loan from North Branch
+(3, 3, 1, 3, 'approved', 12000.00, 10, 6.00, '2024-10-02'),     -- Online loan from South Branch (no approval needed)
+
+-- Pending loans
+(1, 4, NULL, 4, 'pending', 30000.00, 10, 4.50, '2024-10-20'),  -- Business loan pending from East Branch
+(2, 5, NULL, 5, 'pending', 10000.00, 3, 4.00, '2024-10-21'),   -- Personal loan pending from West Branch
+
+-- Rejected loans
+(1, 1, NULL, 1, 'rejected', 40000.00, 15, 5.00, '2024-01-01'), -- Rejected business loan from Head Office
+(2, 2, NULL, 2, 'rejected', 8000.00, 12, 3.50, '2024-05-08');   -- Rejected personal loan from North Branch
 
 -- Insert accounts
 INSERT INTO `account` (`account_type_id`, `customer_id`, `withdrawals_used`, `acc_balance`, `branch_id`)
@@ -334,19 +484,12 @@ VALUES
 (4, 4, 0, 10000.00, 4), -- Senior Savings
 (5, 3, 0, 20000.00, 5); -- Organization FD
 
--- Insert loan installments
-INSERT INTO `loan_installment` (`loan_id`, `is_paid`, `due_date`)
-VALUES 
-(1, FALSE, '2024-02-01'), -- First installment for Loan 1
-(2, TRUE, '2024-02-01'),  -- First installment for Loan 2
-(3, FALSE, '2024-02-01'); -- First installment for Online Loan
-
 -- Insert fixed deposits
 INSERT INTO `fixed_deposit` (`customer_id`, `account_id`, `amount`, `start_date`, `end_date`)
 VALUES 
-(1, 1, 1000.00, '2024-01-01', '2024-07-01'), -- 6 months FD
-(2, 2, 5000.00, '2024-01-01', '2025-01-01'), -- 1 year FD
-(3, 3, 10000.00, '2024-01-01', '2027-01-01'); -- 3 years FD
+(1, 1, 200000.00, '2024-01-01', '2024-07-01'), -- 6 months FD
+(2, 2, 50000.00, '2024-01-01', '2025-01-01'), -- 1 year FD
+(3, 3, 100000.00, '2024-01-01', '2027-01-01'); -- 3 years FD
 
 -- Insert transaction types first
 INSERT INTO `transaction_type` (`name`, `description`)
@@ -358,9 +501,11 @@ VALUES
 -- Insert transactions
 INSERT INTO `transaction` (`customer_id`, `from_account_id`, `to_account_id`, `amount`, `transaction_type_id`)
 VALUES 
-(1, 1, 2, 500.00, 1), -- Deposit
-(2, 2, 3, 1000.00, 2), -- Withdrawal
-(3, 3, 1, 2000.00, 3); -- Transfer
+(1, 1, 2, 500.00, 1),  -- deposit
+(2, 2, 3, 1000.00, 2),  -- withdrawal
+(3, 3, 1, 2000.00, 3),  -- transfer
+(4, 4, 2, 750.00, 1),  -- deposit
+(5, 5, 3, 1200.00, 2);  -- withdrawal
 
 -- Insert employee positions
 INSERT INTO `position` (`name`, `available_action_id`, `description`)
