@@ -2,6 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const authRoutes = require('../routes/authRoutes');
 const loanRoutes = require('../routes/loanRoutes');
+const branchManagementRoutes = require('../routes/branchManagementRoutes');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 dotenv.config();
@@ -14,6 +15,9 @@ app.use('/auth', authRoutes);
 
 // use the loan routes
 app.use('/loans', loanRoutes);
+
+// use the branch management routes
+app.use('/branch-management', branchManagementRoutes);
 
 // sample protected route
 app.get('/protected', authMiddleware, (req, res) => {

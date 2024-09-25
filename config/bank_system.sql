@@ -16,7 +16,10 @@ CREATE TABLE `branch` (
   `name` VARCHAR(255),
   `branch_address` VARCHAR(255),
   `contact_number` VARCHAR(50),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY (`name`),
+  UNIQUE KEY (`branch_address`),
+  UNIQUE KEY (`contact_number`)
 );
 
 -- Create customer_type table
@@ -42,7 +45,9 @@ CREATE TABLE `customer` (
   `password` VARCHAR(255),
   `date_of_birth` DATE,
   PRIMARY KEY (`id`),
-  UNIQUE KEY (`nic`, `phone`, `email`, `username`)
+  UNIQUE KEY (`nic`), 
+  UNIQUE KEY(`email`), 
+  UNIQUE KEY (`username`)
 );
 
 -- Create loan_type table
@@ -146,7 +151,9 @@ CREATE TABLE `employee` (
   `password` VARCHAR(255),
   `position_id` INT,
   PRIMARY KEY (`id`),
-  UNIQUE KEY (`nic`, `email`, `username`)
+  UNIQUE KEY (`nic`), 
+  UNIQUE KEY (`email`), 
+  UNIQUE KEY (`username`)
 );
 
 -- Create manager_employee table
@@ -476,7 +483,8 @@ VALUES
 ('Teller', 2, 'Responsible for day-to-day transactions'),
 ('Loan Officer', 3, 'Handles loan applications and approvals'),
 ('Security Officer', 4, 'Responsible for security and safety of the branch'),
-('Operations Manager', 5, 'Responsible for overall operations management');
+('Operations Manager', 5, 'Responsible for overall operations management'),
+('Technician', 6, 'Responsible for technical support');
 
 -- Insert employees
 INSERT INTO `employee` (`first_name`, `last_name`, `address`, `phone`, `nic`, `email`, `username`, `password`, `position_id`)
@@ -488,7 +496,7 @@ VALUES
 ('Diana', 'Smith', '333 Birch Ln, Maple Grove', '011-555-2233', '852741963V', 'diana@example.com', 'dianasmith', '$2a$10$dpvMriQ6oC20lvisTqVAlOsq2bYzbWOA5vBoWVnn1oh1XF95GIEUe', 1), -- Manager of East Branch  -- pass: password321
 ('Edward', 'Johnson', '890 Pine Ridge St, Brookfield', '011-555-6677', '963258741V', 'edward@example.com', 'edwardjohnson', '$2a$10$akFR0k9YwkB1i8Go/xTfGuuizdEo3AIF.m7HKpyiHn9vbMCyBXhAy', 1), -- Manager of West Branch  -- pass: password654
 
--- General Employees (10 employees in total)
+-- General Employees (12 employees in total)
 ('Frank', 'White', '445 Aspen Ct, Silver Springs', '011-555-4455', '951753486V', 'frank@example.com', 'frankwhite', '$2a$10$AYq3gUc7hokkAaTlBgSCE.APRHc1YVbXXotYqgZqQbxBVun/8e3be', 2), -- Teller  -- password111
 ('George', 'Adams', '567 Willow St, Elmwood', '011-555-8899', '789654123V', 'george@example.com', 'georgeadams', '$2a$10$7KS5PwgeLvmrrEzT8SggpeSNO8l3VZxqprG.NHmYBJrvbIIVA2glm', 2), -- Teller  -- password222
 ('Henry', 'Miller', '789 Spruce Hill Rd, Sunnydale', '011-555-5566', '852456789V', 'henry@example.com', 'henrymiller', '$2a$10$29wqYcZodno6mit/hc2XNer.VvwG.4i5EpHto4krKNKLFewrX8NbG', 2), -- Teller  -- password333
@@ -498,7 +506,9 @@ VALUES
 ('Liam', 'Stone', '576 Cherry Blossom Ln, Kingsport', '011-555-2277', '321654987V', 'liam@example.com', 'liamstone', '$2a$10$VLbACW1gEyqxY6UMLGucXe6aX0eV/DR9Wsl2aVqRqtVk9lG2qyR3i', 2), -- Teller -- password777
 ('Michael', 'Parker', '823 Redwood St, Palm Beach', '011-555-4477', '741852963V', 'michael@example.com', 'michaelparker', '$2a$10$kd0N175zLRVxVRES04EaCuMe8eGb5QVMhoN.ZwKK99HuAD/FVCGbC', 4), -- Security Officer -- password888
 ('Nancy', 'Davis', '104 Mountain View Ave, Clearbrook', '011-555-5599', '963258147V', 'nancy@example.com', 'nancydavis', '$2a$10$TLKZvY/fyl8Dr.njG0CZ3emI2R9LMDLFcryEfjDcHuFSMyGbETkRO', 4), -- Security Officer -- password999
-('Oscar', 'Wright', '679 Gardenia Ln, Meadowbrook', '011-555-6622', '258741963V', 'oscar@example.com', 'oscarwright', '$2a$10$IBN3Lxv6d31aCSxLR0mWUu6d/KndlqsQas9v66CFrpobEMXqNAl4O', 5); -- Operations Manager -- password000
+('Oscar', 'Wright', '679 Gardenia Ln, Meadowbrook', '011-555-6622', '258741963V', 'oscar@example.com', 'oscarwright', '$2a$10$IBN3Lxv6d31aCSxLR0mWUu6d/KndlqsQas9v66CFrpobEMXqNAl4O', 5), -- Operations Manager -- password000
+('Pamela', 'Evans', '234 Sunflower Dr, Sunnyside', '011-555-8822', '369258147V', 'pamela@example.com', 'pamelaevans', '$2a$10$4Q02H3dYwlU243OwBQnyPO2tGEHtjRF/8qpXWn2lMVfx4FSZHSsbG', 6), -- Technician -- password135;
+('Quinn', 'Fisher', '456 Rosewood Ave, Woodland', '011-555-1122', '147963258V', 'quinn@example.com', 'quinnfisher', '$2a$10$OyDSi7r34ZoBkRpj7npd8e0BZxTLzGZCLLwcRRGUl8N6GZyBVP.9G', 6); -- Technician -- password246;
 
 -- Insert managers and employees related to branches
 INSERT INTO `manager_employee` (`manager_id`, `branch_id`)
@@ -520,11 +530,16 @@ VALUES
 (12, 2, 7), -- General Employee 12 at North Branch under Supervisor 7
 (13, 3, 8), -- General Employee 13 at South Branch under Supervisor 8
 (14, 4, 9), -- General Employee 14 at East Branch under Supervisor 9
-(15, 5, 10); -- General Employee 15 at West Branch under Supervisor 10
+(15, 5, 10), -- General Employee 15 at West Branch under Supervisor 10
+(16, 1, 6), -- General Employee 16 at Head Office under Supervisor 6
+(17, 2, 7); -- General Employee 17 at North Branch under Supervisor 7
 
 -- insert actions
 INSERT INTO `action` (`action_name`, `description`)
 VALUES 
-('Approve Loan', 'Approve a loan application.'),
-('Deny Loan', 'Deny a loan application.'),
-('Transfer Funds', 'Transfer funds between accounts.');
+('Approve Loan', 'Approve a loan application'),
+('Deny Loan', 'Deny a loan application'),
+('Transfer Funds', 'Transfer funds between accounts.'),
+('Physical Security Check', 'Perform a physical security check at the branch'),
+('Manage Operations', 'Manage day-to-day operations at the branch'),
+('Technical Support', 'Provide technical support for branch systems');
