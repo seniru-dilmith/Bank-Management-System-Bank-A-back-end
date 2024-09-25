@@ -102,14 +102,6 @@ CREATE TABLE `fixed_deposit` (
   PRIMARY KEY (`id`)
 );
 
--- Create report table
-CREATE TABLE `report` (
-  `id` INT AUTO_INCREMENT,
-  `branch_id` INT,
-  `report_date` DATE,
-  PRIMARY KEY (`id`)
-);
-
 -- Create transaction_type table
 CREATE TABLE `transaction_type` (
   `id` INT AUTO_INCREMENT,
@@ -170,20 +162,6 @@ CREATE TABLE `general_employee` (
   `branch_id` INT,
   `supervisor_id` INT,
   PRIMARY KEY (`employee_id`)
-);
-
--- Create loan_report table
-CREATE TABLE `loan_report` (
-  `report_id` INT,
-  `loan_id` INT,
-  PRIMARY KEY (`report_id`, `loan_id`)
-);
-
--- Create transaction_report table
-CREATE TABLE `transaction_report` (
-  `report_id` INT,
-  `transaction_id` INT,
-  PRIMARY KEY (`report_id`, `transaction_id`)
 );
 
 -- Create action table
@@ -258,25 +236,6 @@ ON DELETE CASCADE ON UPDATE CASCADE,
 ADD FOREIGN KEY (`supervisor_id`) REFERENCES `employee`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Add foreign key relationships to report table
-ALTER TABLE `report`
-ADD FOREIGN KEY (`branch_id`) REFERENCES `branch`(`id`)
-ON DELETE CASCADE ON UPDATE CASCADE;
-
--- Add foreign key relationships to loan_report table
-ALTER TABLE `loan_report`
-ADD FOREIGN KEY (`report_id`) REFERENCES `report`(`id`)
-ON DELETE CASCADE ON UPDATE CASCADE,
-ADD FOREIGN KEY (`loan_id`) REFERENCES `loan`(`id`)
-ON DELETE CASCADE ON UPDATE CASCADE;
-
--- Add foreign key relationships to transaction_report table
-ALTER TABLE `transaction_report`
-ADD FOREIGN KEY (`report_id`) REFERENCES `report`(`id`)
-ON DELETE CASCADE ON UPDATE CASCADE,
-ADD FOREIGN KEY (`transaction_id`) REFERENCES `transaction`(`id`)
-ON DELETE CASCADE ON UPDATE CASCADE;
-
 -- triggers and stored procedures
 
 -- Trigger to generate loan installments after loan approval
@@ -335,21 +294,24 @@ END $$
 
 DELIMITER ;
 
--- stored procedure to get total transactions for a specific branch
+-- stored procedure to get detailed transactions for the past month for a specific branch (reports)
 DELIMITER $$
 
-CREATE PROCEDURE `branch_wise_total_transactions`(IN branchId INT)
+CREATE PROCEDURE `branch_wise_transaction_details_last_month`(IN branchId INT)
 BEGIN
-  SELECT a.branch_id, SUM(t.amount) AS total_transactions
+  SELECT t.id AS transaction_id, t.customer_id, t.from_account_id, t.to_account_id, 
+         t.amount, t.timestamp, tt.name AS transaction_type
   FROM transaction t
   JOIN account a ON t.from_account_id = a.id OR t.to_account_id = a.id
+  JOIN transaction_type tt ON t.transaction_type_id = tt.id
   WHERE a.branch_id = branchId
-  GROUP BY a.branch_id;
+    AND t.timestamp >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+  ORDER BY t.timestamp DESC;
 END $$
 
 DELIMITER ;
 
--- stored procedure to get branch wise late installments
+-- stored procedure to get branch wise late installments (reports)
 DELIMITER $$
 
 CREATE PROCEDURE `branch_wise_late_installments`(IN branchId INT)
@@ -559,26 +521,6 @@ VALUES
 (13, 3, 8), -- General Employee 13 at South Branch under Supervisor 8
 (14, 4, 9), -- General Employee 14 at East Branch under Supervisor 9
 (15, 5, 10); -- General Employee 15 at West Branch under Supervisor 10
-
--- Insert reports into the report table
-INSERT INTO `report` (`id`, `branch_id`, `report_date`)
-VALUES 
-(1, 1, '2024-01-01'),  -- Report 1 for Main Branch
-(2, 2, '2024-02-01'),  -- Report 2 for Downtown Branch
-(3, 3, '2024-03-01');  -- Report 3 for Uptown Branch
-
--- insert the loan reports into the loan_report table
-INSERT INTO `loan_report` (`report_id`, `loan_id`)
-VALUES 
-(1, 1), -- Report 1 is related to Loan 1
-(2, 2), -- Report 2 is related to Loan 2
-(3, 3); -- Report 3 is related to Loan 3
-
-INSERT INTO `transaction_report` (`report_id`, `transaction_id`)
-VALUES 
-(1, 1),
-(2, 2),
-(3, 3);
 
 -- insert actions
 INSERT INTO `action` (`action_name`, `description`)
