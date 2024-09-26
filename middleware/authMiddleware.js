@@ -10,6 +10,7 @@ exports.authMiddleware = (req, res, next) => {
         const decoded = verifyToken(token); // verify the token
         req.user = decoded; // Set the user in the request object
         next(); // continue
+        
     } catch (error) {
         res.status(401).json({ msg: 'token is not valid'})
     }

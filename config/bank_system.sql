@@ -16,7 +16,10 @@ CREATE TABLE `branch` (
   `name` VARCHAR(255),
   `branch_address` VARCHAR(255),
   `contact_number` VARCHAR(50),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY (`name`),
+  UNIQUE KEY (`branch_address`),
+  UNIQUE KEY (`contact_number`)
 );
 
 -- Create customer_type table
@@ -42,7 +45,9 @@ CREATE TABLE `customer` (
   `password` VARCHAR(255),
   `date_of_birth` DATE,
   PRIMARY KEY (`id`),
-  UNIQUE KEY (`nic`, `phone`, `email`, `username`)
+  UNIQUE KEY (`nic`), 
+  UNIQUE KEY(`email`), 
+  UNIQUE KEY (`username`)
 );
 
 -- Create loan_type table
@@ -60,13 +65,13 @@ CREATE TABLE `loan` (
   `id` INT AUTO_INCREMENT,
   `type_id` INT,
   `customer_id` INT,
-  `fixed_deposit_id` INT,
+  `fixed_deposit_id` INT NULL,
+  `branch_id` INT,
   `status` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
   `loan_amount` DECIMAL(15,2),
   `loan_term` INT,
   `interest_rate` DECIMAL(4,2),
   `start_date` DATE,
-  `end_date` DATE,
   PRIMARY KEY (`id`)
 );
 
@@ -85,8 +90,9 @@ CREATE TABLE `account` (
 CREATE TABLE `loan_installment` (
   `id` INT AUTO_INCREMENT,
   `loan_id` INT,
-  `is_paid` BOOLEAN,
-  `due_date` DATE,
+  `installment_amount` DECIMAL(15,2),
+  `paid` DECIMAL(15,2),
+  `next_due_date` DATE,
   PRIMARY KEY (`id`)
 );
 
@@ -98,14 +104,6 @@ CREATE TABLE `fixed_deposit` (
   `amount` DECIMAL(15,2),
   `start_date` DATE,
   `end_date` DATE,
-  PRIMARY KEY (`id`)
-);
-
--- Create report table
-CREATE TABLE `report` (
-  `id` INT AUTO_INCREMENT,
-  `branch_id` INT,
-  `report_date` DATE,
   PRIMARY KEY (`id`)
 );
 
@@ -153,7 +151,9 @@ CREATE TABLE `employee` (
   `password` VARCHAR(255),
   `position_id` INT,
   PRIMARY KEY (`id`),
-  UNIQUE KEY (`nic`, `email`, `username`)
+  UNIQUE KEY (`nic`), 
+  UNIQUE KEY (`email`), 
+  UNIQUE KEY (`username`)
 );
 
 -- Create manager_employee table
@@ -169,20 +169,6 @@ CREATE TABLE `general_employee` (
   `branch_id` INT,
   `supervisor_id` INT,
   PRIMARY KEY (`employee_id`)
-);
-
--- Create loan_report table
-CREATE TABLE `loan_report` (
-  `report_id` INT,
-  `loan_id` INT,
-  PRIMARY KEY (`report_id`, `loan_id`)
-);
-
--- Create transaction_report table
-CREATE TABLE `transaction_report` (
-  `report_id` INT,
-  `transaction_id` INT,
-  PRIMARY KEY (`report_id`, `transaction_id`)
 );
 
 -- Create action table
@@ -206,6 +192,8 @@ ALTER TABLE `loan`
 ADD FOREIGN KEY (`customer_id`) REFERENCES `customer`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE,
 ADD FOREIGN KEY (`type_id`) REFERENCES `loan_type`(`id`)
+ON DELETE CASCADE ON UPDATE CASCADE,
+ADD FOREIGN KEY (`branch_id`) REFERENCES `branch`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Add foreign key relationships to account table
@@ -255,24 +243,145 @@ ON DELETE CASCADE ON UPDATE CASCADE,
 ADD FOREIGN KEY (`supervisor_id`) REFERENCES `employee`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
--- Add foreign key relationships to report table
-ALTER TABLE `report`
-ADD FOREIGN KEY (`branch_id`) REFERENCES `branch`(`id`)
-ON DELETE CASCADE ON UPDATE CASCADE;
+-- triggers and stored procedures
 
--- Add foreign key relationships to loan_report table
-ALTER TABLE `loan_report`
-ADD FOREIGN KEY (`report_id`) REFERENCES `report`(`id`)
-ON DELETE CASCADE ON UPDATE CASCADE,
-ADD FOREIGN KEY (`loan_id`) REFERENCES `loan`(`id`)
-ON DELETE CASCADE ON UPDATE CASCADE;
+-- Trigger to generate loan installments after loan approval
+DELIMITER $$
 
--- Add foreign key relationships to transaction_report table
-ALTER TABLE `transaction_report`
-ADD FOREIGN KEY (`report_id`) REFERENCES `report`(`id`)
-ON DELETE CASCADE ON UPDATE CASCADE,
-ADD FOREIGN KEY (`transaction_id`) REFERENCES `transaction`(`id`)
-ON DELETE CASCADE ON UPDATE CASCADE;
+CREATE TRIGGER generate_loan_installments
+AFTER INSERT ON `loan`
+FOR EACH ROW
+BEGIN
+  DECLARE num_installments INT;
+  DECLARE monthly_payment DECIMAL(15,2);
+  DECLARE total_amount DECIMAL(15,2);
+  DECLARE installment_due_date DATE;
+  DECLARE monthly_interest_rate DECIMAL(4,2);
+  DECLARE next_due_date DATE;
+
+  -- Only generate installments if the loan is approved
+  IF NEW.status = 'approved' THEN
+    -- Calculate the monthly interest rate from the annual interest rate
+    SET monthly_interest_rate = NEW.interest_rate / 12;
+
+    -- Calculate the total loan amount (Principal + Monthly interest over loan term)
+    SET total_amount = NEW.loan_amount + (NEW.loan_amount * monthly_interest_rate / 100 * NEW.loan_term);
+
+    -- Calculate the monthly installment amount
+    SET monthly_payment = total_amount / NEW.loan_term;
+
+    -- Set number of installments (loan_term is already in months)
+    SET num_installments = NEW.loan_term;
+
+    -- Set the first installment due date (1 month after the loan application start date)
+    SET installment_due_date = DATE_ADD(NEW.start_date, INTERVAL 1 MONTH);
+
+    -- Generate loan installments for each month
+    WHILE num_installments > 0 DO
+      -- If this is the last installment, set next_due_date to NULL
+      IF num_installments = 1 THEN
+        SET next_due_date = NULL;
+      ELSE
+        -- Set next installment's due date (1 month after the current installment)
+        SET next_due_date = DATE_ADD(installment_due_date, INTERVAL 1 MONTH);
+      END IF;
+
+      -- Insert the installment with the calculated due date and next due date
+      INSERT INTO loan_installment (loan_id, installment_amount, paid, next_due_date)
+      VALUES (NEW.id, monthly_payment, 0, next_due_date);
+
+      -- Update the installment_due_date for the next iteration
+      SET installment_due_date = next_due_date;
+
+      -- Decrease the number of remaining installments
+      SET num_installments = num_installments - 1;
+    END WHILE;
+  END IF;
+END $$
+
+DELIMITER ;
+
+-- stored procedure to get detailed transactions for the past month for a specific branch (reports)
+DELIMITER $$
+
+CREATE PROCEDURE `branch_wise_transaction_details_last_month`(IN branchId INT)
+BEGIN
+  SELECT t.id AS transaction_id, t.customer_id, t.from_account_id, t.to_account_id, 
+         t.amount, t.timestamp, tt.name AS transaction_type
+  FROM transaction t
+  JOIN account a ON t.from_account_id = a.id OR t.to_account_id = a.id
+  JOIN transaction_type tt ON t.transaction_type_id = tt.id
+  WHERE a.branch_id = branchId
+    AND t.timestamp >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
+  ORDER BY t.timestamp DESC;
+END $$
+
+DELIMITER ;
+
+-- stored procedure to get branch wise late installments (reports)
+DELIMITER $$
+
+CREATE PROCEDURE `branch_wise_late_installments`(IN branchId INT)
+BEGIN
+  SELECT l.id AS loan_id, c.first_name, c.last_name, li.next_due_date, li.installment_amount, li.paid
+  FROM loan l
+  JOIN loan_installment li ON l.id = li.loan_id
+  JOIN customer c ON l.customer_id = c.id
+  WHERE c.branch_id = branchId
+    AND li.next_due_date < CURDATE()
+    AND li.paid = 0;
+END $$
+
+DELIMITER ;
+
+-- Trigger for Online Loan Based on FD
+DELIMITER $$
+
+CREATE TRIGGER process_online_loan
+AFTER UPDATE ON `loan`
+FOR EACH ROW
+BEGIN
+  DECLARE fd_amount DECIMAL(15,2);
+  DECLARE max_loan_amount_by_fd DECIMAL(15,2);
+  DECLARE deposit_amount DECIMAL(15,2);
+  DECLARE fd_account_id INT;
+  DECLARE savings_account_id INT;
+  DECLARE online_loan_limit DECIMAL(15,2) DEFAULT 500000;
+
+  -- Check if the loan is an online loan and doesn't require approval
+  IF NEW.status = 'approved' AND NEW.fixed_deposit_id IS NOT NULL AND NEW.type_id = (
+      SELECT id FROM loan_type WHERE is_online = TRUE LIMIT 1) THEN
+
+    -- Get the FD amount and associated savings account bound to the FD
+    SELECT amount, account_id INTO fd_amount, fd_account_id
+    FROM fixed_deposit
+    WHERE id = NEW.fixed_deposit_id;
+
+    -- Calculate the maximum allowed loan amount (60% of FD with upper limit)
+    SET max_loan_amount_by_fd = CAST(fd_amount * 0.60 AS DECIMAL(15,2));
+
+    -- Ensure the requested loan amount is within the allowed limit
+    IF NEW.loan_amount <= max_loan_amount_by_fd AND NEW.loan_amount <= online_loan_limit THEN
+      -- Find the savings account bound to the fixed deposit
+      SELECT id INTO savings_account_id
+      FROM account
+      WHERE customer_id = NEW.customer_id AND account_type_id = (
+          SELECT id FROM account_type WHERE name LIKE 'Savings%' LIMIT 1);
+
+      -- Deposit the loan amount into the savings account
+      UPDATE account
+      SET acc_balance = acc_balance + NEW.loan_amount
+      WHERE id = savings_account_id;
+      
+    ELSE
+      -- If the requested loan exceeds the maximum limit, raise an error
+      SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Requested loan exceeds the maximum allowed loan limit based on the FD amount';
+    END IF;
+
+  END IF;
+END $$
+
+DELIMITER ;
 
 -- Sample Data Insertions
 
@@ -319,11 +428,21 @@ VALUES
 ('Online Loan', TRUE, 'Instant loan through online application');
 
 -- Insert loans
-INSERT INTO `loan` (`type_id`, `customer_id`, `fixed_deposit_id`, `status`, `loan_amount`, `loan_term`, `interest_rate`, `start_date`, `end_date`)
+INSERT INTO `loan` 
+(`type_id`, `customer_id`, `fixed_deposit_id`, `branch_id`, `status`, `loan_amount`, `loan_term`, `interest_rate`, `start_date`)
 VALUES 
-(1, 1, NULL, 'pending', 50000.00, 15, 5.50, '2024-01-01', '2039-01-01'),
-(2, 2, NULL, 'approved', 20000.00, 5, 3.00, '2024-01-01', '2029-01-01'),
-(3, 3, NULL, 'approved', 10000.00, 1, 6.00, '2024-01-01', '2025-01-01'); -- Online loan
+-- Approved loans (including an online loan)
+(1, 1, NULL, 1, 'approved', 50000.00, 15, 5.50, '2024-10-05'),  -- Business loan from Head Office
+(2, 2, NULL, 2, 'approved', 20000.00, 6, 3.00, '2024-10-08'),  -- Personal loan from North Branch
+(3, 3, 1, 3, 'approved', 12000.00, 10, 6.00, '2024-10-02'),     -- Online loan from South Branch (no approval needed)
+
+-- Pending loans
+(1, 4, NULL, 4, 'pending', 30000.00, 10, 4.50, '2024-10-20'),  -- Business loan pending from East Branch
+(2, 5, NULL, 5, 'pending', 10000.00, 3, 4.00, '2024-10-21'),   -- Personal loan pending from West Branch
+
+-- Rejected loans
+(1, 1, NULL, 1, 'rejected', 40000.00, 15, 5.00, '2024-01-01'), -- Rejected business loan from Head Office
+(2, 2, NULL, 2, 'rejected', 8000.00, 12, 3.50, '2024-05-08');   -- Rejected personal loan from North Branch
 
 -- Insert accounts
 INSERT INTO `account` (`account_type_id`, `customer_id`, `withdrawals_used`, `acc_balance`, `branch_id`)
@@ -334,19 +453,12 @@ VALUES
 (4, 4, 0, 10000.00, 4), -- Senior Savings
 (5, 3, 0, 20000.00, 5); -- Organization FD
 
--- Insert loan installments
-INSERT INTO `loan_installment` (`loan_id`, `is_paid`, `due_date`)
-VALUES 
-(1, FALSE, '2024-02-01'), -- First installment for Loan 1
-(2, TRUE, '2024-02-01'),  -- First installment for Loan 2
-(3, FALSE, '2024-02-01'); -- First installment for Online Loan
-
 -- Insert fixed deposits
 INSERT INTO `fixed_deposit` (`customer_id`, `account_id`, `amount`, `start_date`, `end_date`)
 VALUES 
-(1, 1, 1000.00, '2024-01-01', '2024-07-01'), -- 6 months FD
-(2, 2, 5000.00, '2024-01-01', '2025-01-01'), -- 1 year FD
-(3, 3, 10000.00, '2024-01-01', '2027-01-01'); -- 3 years FD
+(1, 1, 200000.00, '2024-01-01', '2024-07-01'), -- 6 months FD
+(2, 2, 50000.00, '2024-01-01', '2025-01-01'), -- 1 year FD
+(3, 3, 100000.00, '2024-01-01', '2027-01-01'); -- 3 years FD
 
 -- Insert transaction types first
 INSERT INTO `transaction_type` (`name`, `description`)
@@ -358,9 +470,11 @@ VALUES
 -- Insert transactions
 INSERT INTO `transaction` (`customer_id`, `from_account_id`, `to_account_id`, `amount`, `transaction_type_id`)
 VALUES 
-(1, 1, 2, 500.00, 1), -- Deposit
-(2, 2, 3, 1000.00, 2), -- Withdrawal
-(3, 3, 1, 2000.00, 3); -- Transfer
+(1, 1, 2, 500.00, 1),  -- deposit
+(2, 2, 3, 1000.00, 2),  -- withdrawal
+(3, 3, 1, 2000.00, 3),  -- transfer
+(4, 4, 2, 750.00, 1),  -- deposit
+(5, 5, 3, 1200.00, 2);  -- withdrawal
 
 -- Insert employee positions
 INSERT INTO `position` (`name`, `available_action_id`, `description`)
@@ -369,7 +483,8 @@ VALUES
 ('Teller', 2, 'Responsible for day-to-day transactions'),
 ('Loan Officer', 3, 'Handles loan applications and approvals'),
 ('Security Officer', 4, 'Responsible for security and safety of the branch'),
-('Operations Manager', 5, 'Responsible for overall operations management');
+('Operations Manager', 5, 'Responsible for overall operations management'),
+('Technician', 6, 'Responsible for technical support');
 
 -- Insert employees
 INSERT INTO `employee` (`first_name`, `last_name`, `address`, `phone`, `nic`, `email`, `username`, `password`, `position_id`)
@@ -381,7 +496,7 @@ VALUES
 ('Diana', 'Smith', '333 Birch Ln, Maple Grove', '011-555-2233', '852741963V', 'diana@example.com', 'dianasmith', '$2a$10$dpvMriQ6oC20lvisTqVAlOsq2bYzbWOA5vBoWVnn1oh1XF95GIEUe', 1), -- Manager of East Branch  -- pass: password321
 ('Edward', 'Johnson', '890 Pine Ridge St, Brookfield', '011-555-6677', '963258741V', 'edward@example.com', 'edwardjohnson', '$2a$10$akFR0k9YwkB1i8Go/xTfGuuizdEo3AIF.m7HKpyiHn9vbMCyBXhAy', 1), -- Manager of West Branch  -- pass: password654
 
--- General Employees (10 employees in total)
+-- General Employees (12 employees in total)
 ('Frank', 'White', '445 Aspen Ct, Silver Springs', '011-555-4455', '951753486V', 'frank@example.com', 'frankwhite', '$2a$10$AYq3gUc7hokkAaTlBgSCE.APRHc1YVbXXotYqgZqQbxBVun/8e3be', 2), -- Teller  -- password111
 ('George', 'Adams', '567 Willow St, Elmwood', '011-555-8899', '789654123V', 'george@example.com', 'georgeadams', '$2a$10$7KS5PwgeLvmrrEzT8SggpeSNO8l3VZxqprG.NHmYBJrvbIIVA2glm', 2), -- Teller  -- password222
 ('Henry', 'Miller', '789 Spruce Hill Rd, Sunnydale', '011-555-5566', '852456789V', 'henry@example.com', 'henrymiller', '$2a$10$29wqYcZodno6mit/hc2XNer.VvwG.4i5EpHto4krKNKLFewrX8NbG', 2), -- Teller  -- password333
@@ -391,7 +506,9 @@ VALUES
 ('Liam', 'Stone', '576 Cherry Blossom Ln, Kingsport', '011-555-2277', '321654987V', 'liam@example.com', 'liamstone', '$2a$10$VLbACW1gEyqxY6UMLGucXe6aX0eV/DR9Wsl2aVqRqtVk9lG2qyR3i', 2), -- Teller -- password777
 ('Michael', 'Parker', '823 Redwood St, Palm Beach', '011-555-4477', '741852963V', 'michael@example.com', 'michaelparker', '$2a$10$kd0N175zLRVxVRES04EaCuMe8eGb5QVMhoN.ZwKK99HuAD/FVCGbC', 4), -- Security Officer -- password888
 ('Nancy', 'Davis', '104 Mountain View Ave, Clearbrook', '011-555-5599', '963258147V', 'nancy@example.com', 'nancydavis', '$2a$10$TLKZvY/fyl8Dr.njG0CZ3emI2R9LMDLFcryEfjDcHuFSMyGbETkRO', 4), -- Security Officer -- password999
-('Oscar', 'Wright', '679 Gardenia Ln, Meadowbrook', '011-555-6622', '258741963V', 'oscar@example.com', 'oscarwright', '$2a$10$IBN3Lxv6d31aCSxLR0mWUu6d/KndlqsQas9v66CFrpobEMXqNAl4O', 5); -- Operations Manager -- password000
+('Oscar', 'Wright', '679 Gardenia Ln, Meadowbrook', '011-555-6622', '258741963V', 'oscar@example.com', 'oscarwright', '$2a$10$IBN3Lxv6d31aCSxLR0mWUu6d/KndlqsQas9v66CFrpobEMXqNAl4O', 5), -- Operations Manager -- password000
+('Pamela', 'Evans', '234 Sunflower Dr, Sunnyside', '011-555-8822', '369258147V', 'pamela@example.com', 'pamelaevans', '$2a$10$4Q02H3dYwlU243OwBQnyPO2tGEHtjRF/8qpXWn2lMVfx4FSZHSsbG', 6), -- Technician -- password135;
+('Quinn', 'Fisher', '456 Rosewood Ave, Woodland', '011-555-1122', '147963258V', 'quinn@example.com', 'quinnfisher', '$2a$10$OyDSi7r34ZoBkRpj7npd8e0BZxTLzGZCLLwcRRGUl8N6GZyBVP.9G', 6); -- Technician -- password246;
 
 -- Insert managers and employees related to branches
 INSERT INTO `manager_employee` (`manager_id`, `branch_id`)
@@ -413,31 +530,16 @@ VALUES
 (12, 2, 7), -- General Employee 12 at North Branch under Supervisor 7
 (13, 3, 8), -- General Employee 13 at South Branch under Supervisor 8
 (14, 4, 9), -- General Employee 14 at East Branch under Supervisor 9
-(15, 5, 10); -- General Employee 15 at West Branch under Supervisor 10
-
--- Insert reports into the report table
-INSERT INTO `report` (`id`, `branch_id`, `report_date`)
-VALUES 
-(1, 1, '2024-01-01'),  -- Report 1 for Main Branch
-(2, 2, '2024-02-01'),  -- Report 2 for Downtown Branch
-(3, 3, '2024-03-01');  -- Report 3 for Uptown Branch
-
--- insert the loan reports into the loan_report table
-INSERT INTO `loan_report` (`report_id`, `loan_id`)
-VALUES 
-(1, 1), -- Report 1 is related to Loan 1
-(2, 2), -- Report 2 is related to Loan 2
-(3, 3); -- Report 3 is related to Loan 3
-
-INSERT INTO `transaction_report` (`report_id`, `transaction_id`)
-VALUES 
-(1, 1),
-(2, 2),
-(3, 3);
+(15, 5, 10), -- General Employee 15 at West Branch under Supervisor 10
+(16, 1, 6), -- General Employee 16 at Head Office under Supervisor 6
+(17, 2, 7); -- General Employee 17 at North Branch under Supervisor 7
 
 -- insert actions
 INSERT INTO `action` (`action_name`, `description`)
 VALUES 
-('Approve Loan', 'Approve a loan application.'),
-('Deny Loan', 'Deny a loan application.'),
-('Transfer Funds', 'Transfer funds between accounts.');
+('Approve Loan', 'Approve a loan application'),
+('Deny Loan', 'Deny a loan application'),
+('Transfer Funds', 'Transfer funds between accounts.'),
+('Physical Security Check', 'Perform a physical security check at the branch'),
+('Manage Operations', 'Manage day-to-day operations at the branch'),
+('Technical Support', 'Provide technical support for branch systems');
