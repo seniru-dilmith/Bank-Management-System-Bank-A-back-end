@@ -2,7 +2,6 @@ const db = require('../config/db');
 const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 
-
 // Controller function to get all employees
 exports.getEmployees = async (req, res) => {
     try {
@@ -161,9 +160,21 @@ exports.removeEmployee = async (req, res) => {
     const { id } = req.params;  // Get the employee ID from the request parameters
     try {
 
+        const [results] = await db.query(`
+            SELECT id, first_name, last_name
+            FROM employee
+            WHERE id = ?
+            `, [id]);  // Query to check if the employee exists
+
+        // Check if the employee exists
+        if (results.length === 0) {
+            return res.status(404).json({ msg : `Employee with id: ${id} not found`});
+        }
+
         await db.query('DELETE FROM employee WHERE id = ?', [id]);  // Query to delete the employee
 
-        res.json({ msg: `Employee with ID ${id} deleted successfully` });
+        // Send a success message with the deleted employee's name
+        res.json({ msg: `Employee ${results[0].first_name} ${results[0].last_name} deleted successfully` });
 
     } catch (error) {
         console.error(error);
