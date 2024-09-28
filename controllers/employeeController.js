@@ -158,6 +158,11 @@ exports.updateEmployee = async (req, res) => {
 // Controller function to delete an employee
 exports.removeEmployee = async (req, res) => {
     const { id } = req.params;  // Get the employee ID from the request parameters
+
+    // Check if the user is trying to delete themselves
+    if (parseInt(id) === req.user.id)
+        return res.status(400).json({ msg: 'You cannot delete yourself' });
+
     try {
 
         const [results] = await db.query(`
