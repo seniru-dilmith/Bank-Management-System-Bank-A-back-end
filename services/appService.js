@@ -4,6 +4,7 @@ const authRoutes = require('../routes/authRoutes');
 const loanRoutes = require('../routes/loanRoutes');
 const branchManagementRoutes = require('../routes/branchManagementRoutes');
 const accountSummaryRoutes = require('../routes/accountSummaryRoutes'); 
+const transactionRoutes = require('../routes/transactionRoutes');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
 dotenv.config();
@@ -16,6 +17,9 @@ app.use('/auth', authRoutes);
 
 // use the loan routes
 app.use('/loans', loanRoutes);
+
+// use the transaction routes
+app.use('/transactions', transactionRoutes);
 
 // use the branch management routes
 app.use('/branch-management', branchManagementRoutes);
