@@ -70,5 +70,44 @@ exports.requestLoan = async (req, res) => {
     }
 };
 
+// Controller function to get details of a specific loan application
+exports.getLoanDetails = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
 
+    try {
+        const loanId = req.params.id; // Get loan ID from URL params
+        const customerId = req.user.id; // Get the customer ID from the JWT token
+
+        // Ensure only customers can view loan application details
+        if (req.user.userType !== 'customer') {
+            return res.status(403).json({ msg: 'Only customers can view loan application details.' });
+        }
+
+        // Query to get loan details including loan type, loan status, and application status
+        const loanDetailsQuery = `
+            SELECT l.id AS loanId, 
+                   lt.type_name AS loanType, 
+                   l.status AS loanStatus, 
+                   l.start_date AS applicationDate
+            FROM loan l
+            JOIN loan_type lt ON l.type_id = lt.id
+            WHERE l.customer_id = ? AND l.id = ?
+        `;
+
+        const [loanDetails] = await db.query(loanDetailsQuery, [customerId, loanId]);
+
+        if (loanDetails.length === 0) {
+            return res.status(404).json({ msg: 'No loan found with this ID for the customer' });
+        }
+
+        // Return the loan details
+        res.json(loanDetails[0]);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Server error during loan details retrieval' });
+    }
+};
 
