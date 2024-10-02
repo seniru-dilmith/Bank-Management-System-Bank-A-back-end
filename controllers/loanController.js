@@ -69,3 +69,6 @@ exports.requestLoan = async (req, res) => {
         res.status(500).json({ msg: 'Server error while submitting the loan request.' });
     }
 };
+
+
+

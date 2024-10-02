@@ -14,7 +14,7 @@ exports.getAccountSummary = async (req, res) => {
         // Query to fetch account details for the current customer
         const accountsQuery = `
             SELECT 
-                a.id,
+                a.account_number,
                 at.name AS account_type,
                 a.acc_balance
             FROM account a

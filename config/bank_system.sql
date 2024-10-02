@@ -39,11 +39,11 @@ CREATE TABLE `customer` (
   `first_name` VARCHAR(255),
   `last_name` VARCHAR(255),
   `address` VARCHAR(255),
-  `phone` VARCHAR(50),
+  `phone` VARCHAR(10),
   `email` VARCHAR(255),
   `username` VARCHAR(50),
   `password` VARCHAR(255),
-  `date_of_birth` DATE,
+  `date_of_birth_or_origin` DATE,
   PRIMARY KEY (`id`),
   UNIQUE KEY (`nic`), 
   UNIQUE KEY(`email`), 
@@ -77,13 +77,13 @@ CREATE TABLE `loan` (
 
 -- Create account table
 CREATE TABLE `account` (
-  `id` INT AUTO_INCREMENT,
+  `account_number` INT(8) ZEROFILL AUTO_INCREMENT,
   `account_type_id` INT,
   `customer_id` INT,
   `withdrawals_used` INT,
   `acc_balance` DECIMAL(15,2),
   `branch_id` INT,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`account_number`)
 );
 
 -- Create loan_installment table
@@ -100,7 +100,7 @@ CREATE TABLE `loan_installment` (
 CREATE TABLE `fixed_deposit` (
   `id` INT AUTO_INCREMENT,
   `customer_id` INT,
-  `account_id` INT,
+  `account_number` INT(8) ZEROFILL,
   `amount` DECIMAL(15,2),
   `start_date` DATE,
   `end_date` DATE,
@@ -120,11 +120,14 @@ CREATE TABLE `transaction_type` (
 CREATE TABLE `transaction` (
   `id` INT AUTO_INCREMENT,
   `customer_id` INT,
-  `from_account_id` INT,
-  `to_account_id` INT,
+  `from_account_number` INT(8) ZEROFILL,
+  `to_account_number` INT(8) ZEROFILL,
   `amount` DECIMAL(15,2),
   `timestamp` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `transaction_type_id` INT,
+  `beneficiary_name` VARCHAR(255),
+  `receiver_reference` VARCHAR(255),
+  `my_reference` VARCHAR(255),
   PRIMARY KEY (`id`)
 );
 
@@ -132,7 +135,6 @@ CREATE TABLE `transaction` (
 CREATE TABLE `position` (
   `id` INT AUTO_INCREMENT,
   `name` VARCHAR(50),
-  `available_action_id` INT,
   `description` VARCHAR(255),
   PRIMARY KEY (`id`),
   UNIQUE KEY (`name`)
@@ -144,7 +146,7 @@ CREATE TABLE `employee` (
   `first_name` VARCHAR(255),
   `last_name` VARCHAR(255),
   `address` VARCHAR(255),
-  `phone` VARCHAR(50),
+  `phone` VARCHAR(10),
   `nic` VARCHAR(12),
   `email` VARCHAR(255),
   `username` VARCHAR(50),
@@ -178,6 +180,13 @@ CREATE TABLE `action` (
   `description` VARCHAR(255),
   PRIMARY KEY (`id`),
   UNIQUE KEY (`action_name`)
+);
+
+-- Create position_action table
+CREATE TABLE `position_action` (
+  `position_id` INT,
+  `action_id` INT,
+  PRIMARY KEY (`position_id`, `action_id`)
 );
 
 -- Relationships
@@ -214,14 +223,14 @@ ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE `fixed_deposit`
 ADD FOREIGN KEY (`customer_id`) REFERENCES `customer`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE,
-ADD FOREIGN KEY (`account_id`) REFERENCES `account`(`id`)
+ADD FOREIGN KEY (`account_number`) REFERENCES `account`(`account_number`)
 ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- Add foreign key relationships to transaction table
 ALTER TABLE `transaction`
-ADD FOREIGN KEY (`from_account_id`) REFERENCES `account`(`id`)
+ADD FOREIGN KEY (`from_account_number`) REFERENCES `account`(`account_number`)
 ON DELETE CASCADE ON UPDATE CASCADE,
-ADD FOREIGN KEY (`to_account_id`) REFERENCES `account`(`id`)
+ADD FOREIGN KEY (`to_account_number`) REFERENCES `account`(`account_number`)
 ON DELETE CASCADE ON UPDATE CASCADE,
 ADD FOREIGN KEY (`transaction_type_id`) REFERENCES `transaction_type`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE;
@@ -241,6 +250,13 @@ ALTER TABLE `general_employee`
 ADD FOREIGN KEY (`branch_id`) REFERENCES `branch`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE,
 ADD FOREIGN KEY (`supervisor_id`) REFERENCES `employee`(`id`)
+ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Add foreign key relationships to position_action table
+ALTER TABLE `position_action`
+ADD FOREIGN KEY (`position_id`) REFERENCES `position`(`id`) 
+ON DELETE CASCADE ON UPDATE CASCADE,
+ADD FOREIGN KEY (`action_id`) REFERENCES `action`(`id`) 
 ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- triggers and stored procedures
@@ -306,10 +322,10 @@ DELIMITER $$
 
 CREATE PROCEDURE `branch_wise_transaction_details_last_month`(IN branchId INT)
 BEGIN
-  SELECT t.id AS transaction_id, t.customer_id, t.from_account_id, t.to_account_id, 
+  SELECT t.id AS transaction_id, t.customer_id, t.from_account_number, t.to_account_number, 
          t.amount, t.timestamp, tt.name AS transaction_type
   FROM transaction t
-  JOIN account a ON t.from_account_id = a.id OR t.to_account_id = a.id
+  JOIN account a ON t.from_account_number = a.account_number OR t.to_account_number = a.account_number
   JOIN transaction_type tt ON t.transaction_type_id = tt.id
   WHERE a.branch_id = branchId
     AND t.timestamp >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH)
@@ -327,7 +343,8 @@ BEGIN
   FROM loan l
   JOIN loan_installment li ON l.id = li.loan_id
   JOIN customer c ON l.customer_id = c.id
-  WHERE c.branch_id = branchId
+  JOIN account a ON a.customer_id = c.id
+  WHERE a.branch_id = branchId
     AND li.next_due_date < CURDATE()
     AND li.paid = 0;
 END $$
@@ -344,8 +361,8 @@ BEGIN
   DECLARE fd_amount DECIMAL(15,2);
   DECLARE max_loan_amount_by_fd DECIMAL(15,2);
   DECLARE deposit_amount DECIMAL(15,2);
-  DECLARE fd_account_id INT;
-  DECLARE savings_account_id INT;
+  DECLARE fd_account_number INT;
+  DECLARE savings_account_number INT;
   DECLARE online_loan_limit DECIMAL(15,2) DEFAULT 500000;
 
   -- Check if the loan is an online loan and doesn't require approval
@@ -353,7 +370,7 @@ BEGIN
       SELECT id FROM loan_type WHERE is_online = TRUE LIMIT 1) THEN
 
     -- Get the FD amount and associated savings account bound to the FD
-    SELECT amount, account_id INTO fd_amount, fd_account_id
+    SELECT amount, account_number INTO fd_amount, fd_account_number
     FROM fixed_deposit
     WHERE id = NEW.fixed_deposit_id;
 
@@ -363,7 +380,7 @@ BEGIN
     -- Ensure the requested loan amount is within the allowed limit
     IF NEW.loan_amount <= max_loan_amount_by_fd AND NEW.loan_amount <= online_loan_limit THEN
       -- Find the savings account bound to the fixed deposit
-      SELECT id INTO savings_account_id
+      SELECT account_number INTO savings_account_number
       FROM account
       WHERE customer_id = NEW.customer_id AND account_type_id = (
           SELECT id FROM account_type WHERE name LIKE 'Savings%' LIMIT 1);
@@ -371,7 +388,7 @@ BEGIN
       -- Deposit the loan amount into the savings account
       UPDATE account
       SET acc_balance = acc_balance + NEW.loan_amount
-      WHERE id = savings_account_id;
+      WHERE account_number = savings_account_number;
       
     ELSE
       -- If the requested loan exceeds the maximum limit, raise an error
@@ -412,13 +429,13 @@ VALUES
 ('Organization', 'Banking services for corporate organizations');
 
 -- Insert customers
-INSERT INTO `customer` (`nic`, `customer_type_id`, `first_name`, `last_name`, `address`, `phone`, `email`, `username`, `password`, `date_of_birth`)
+INSERT INTO `customer` (`nic`, `customer_type_id`, `first_name`, `last_name`, `address`, `phone`, `email`, `username`, `password`, `date_of_birth_or_origin`)
 VALUES 
-('123456789V', 1, 'Alice', 'Smith', '456 Elm St', '011-555-1234', 'alice@example.com', 'alice01', '$2a$10$r997wlXuZyphF2FmjVKleesT7557JQqbFEJMdMXjjFogPSvz2MQhG', '2010-04-15'), -- Children pass: password123
-('987654321V', 1, 'John', 'Doe', '789 Oak St', '011-555-5678', 'john@example.com', 'john01', '$2a$10$gLl8smHkhUK7xNpAXh62Vut9tt9I8TnwoWePLSdtmiuCAeU0.Goqu', '2005-09-25'), -- Teen pass: password456
-('543216789V', 1, 'Sam', 'Adams', '789 Pine St', '011-555-9876', 'sam@example.com', 'samadams', '$2a$10$DsMGDeS3a/OdcuC59CxkoegWaloDv5hNiquW/pwv7LBmXUYcGb1Ee', '1975-11-30'), -- Adult pass: password789
-('321654987V', 1, 'Elder', 'John', '1010 Maple St', '011-555-0001', 'elderjohn@example.com', 'elderjohn', '$2a$10$oeE4rvCaCldkxBMcrGRJrOc2yxJEbRN7kxWIk8d.Herty1xMSfkje', '1955-03-10'), -- Senior pass: password321
-('852963741V', 2, 'XYZ Corp', 'Ltd', '22 Corporate Ave', '011-555-9876', 'xyzcorp@example.com', 'xyzcorp', '$2a$10$X1aSzbnckesYHrGObXSbReMtWNusBTLGbycKg/wtNzEIK7P6rH8me', '1985-06-10'); -- Organization pass: securepass
+('123456789V', 1, 'Alice', 'Smith', '456 Elm St', '0115551234', 'alice@example.com', 'alice01', '$2a$10$r997wlXuZyphF2FmjVKleesT7557JQqbFEJMdMXjjFogPSvz2MQhG', '2010-04-15'), -- Children pass: password123
+('987654321V', 1, 'John', 'Doe', '789 Oak St', '0115555678', 'john@example.com', 'john01', '$2a$10$gLl8smHkhUK7xNpAXh62Vut9tt9I8TnwoWePLSdtmiuCAeU0.Goqu', '2005-09-25'), -- Teen pass: password456
+('543216789V', 1, 'Sam', 'Adams', '789 Pine St', '0115559876', 'sam@example.com', 'samadams', '$2a$10$DsMGDeS3a/OdcuC59CxkoegWaloDv5hNiquW/pwv7LBmXUYcGb1Ee', '1975-11-30'), -- Adult pass: password789
+('321654987V', 1, 'Elder', 'John', '1010 Maple St', '0115550001', 'elderjohn@example.com', 'elderjohn', '$2a$10$oeE4rvCaCldkxBMcrGRJrOc2yxJEbRN7kxWIk8d.Herty1xMSfkje', '1955-03-10'), -- Senior pass: password321
+('852963741V', 2, 'XYZ Corp', 'Ltd', '22 Corporate Ave', '0115559876', 'xyzcorp@example.com', 'xyzcorp', '$2a$10$X1aSzbnckesYHrGObXSbReMtWNusBTLGbycKg/wtNzEIK7P6rH8me', '1985-06-10'); -- Organization pass: securepass
 
 -- Insert loan types (Online loans do not require approval)
 INSERT INTO `loan_type` (`type_name`, `is_online`, `description`)
@@ -445,20 +462,20 @@ VALUES
 (2, 2, NULL, 2, 'rejected', 8000.00, 12, 3.50, '2024-05-08');   -- Rejected personal loan from North Branch
 
 -- Insert accounts
-INSERT INTO `account` (`account_type_id`, `customer_id`, `withdrawals_used`, `acc_balance`, `branch_id`)
+INSERT INTO `account` (`account_number`, `account_type_id`, `customer_id`, `withdrawals_used`, `acc_balance`, `branch_id`)
 VALUES 
-(1, 1, 2, 1000.00, 1),  -- Children Savings
-(2, 2, 0, 1500.00, 2),  -- Teen Savings
-(3, 3, 0, 5000.00, 3),  -- Adult Savings
-(4, 4, 0, 10000.00, 4), -- Senior Savings
-(5, 3, 0, 20000.00, 5); -- Organization FD
+(10000001, 1, 1, 2, 1000.00, 1),  -- Children Savings
+(10000002, 2, 2, 0, 1500.00, 2),  -- Teen Savings
+(10000003, 3, 3, 0, 5000.00, 3),  -- Adult Savings
+(10000004, 4, 4, 0, 10000.00, 4), -- Senior Savings
+(10000005, 5, 3, 0, 20000.00, 5); -- Organization FD
 
 -- Insert fixed deposits
-INSERT INTO `fixed_deposit` (`customer_id`, `account_id`, `amount`, `start_date`, `end_date`)
+INSERT INTO `fixed_deposit` (`customer_id`, `account_number`, `amount`, `start_date`, `end_date`)
 VALUES 
-(1, 1, 200000.00, '2024-01-01', '2024-07-01'), -- 6 months FD
-(2, 2, 50000.00, '2024-01-01', '2025-01-01'), -- 1 year FD
-(3, 3, 100000.00, '2024-01-01', '2027-01-01'); -- 3 years FD
+(1, 10000001, 200000.00, '2024-01-01', '2024-07-01'), -- 6 months FD
+(2, 10000002, 50000.00, '2024-01-01', '2025-01-01'), -- 1 year FD
+(3, 10000003, 100000.00, '2024-01-01', '2027-01-01'); -- 3 years FD
 
 -- Insert transaction types first
 INSERT INTO `transaction_type` (`name`, `description`)
@@ -468,47 +485,47 @@ VALUES
 ('Transfer', 'Transfer money between accounts.');
 
 -- Insert transactions
-INSERT INTO `transaction` (`customer_id`, `from_account_id`, `to_account_id`, `amount`, `transaction_type_id`)
+INSERT INTO `transaction` (`customer_id`, `from_account_number`, `to_account_number`, `amount`, `transaction_type_id`, `beneficiary_name`, `receiver_reference`, `my_reference`)
 VALUES 
-(1, 1, 2, 500.00, 1),  -- deposit
-(2, 2, 3, 1000.00, 2),  -- withdrawal
-(3, 3, 1, 2000.00, 3),  -- transfer
-(4, 4, 2, 750.00, 1),  -- deposit
-(5, 5, 3, 1200.00, 2);  -- withdrawal
+(1, 10000001, 10000002, 500.00, 1, 'John Doe', 'ABC123', 'XYZ987'),  -- deposit
+(2, 10000002, 10000003, 1000.00, 2, 'Sam Adams', 'DEF456', 'XYZ654'),  -- withdrawal
+(3, 10000003, 10000001, 2000.00, 3, 'Alice Smith', 'GHI789', 'XYZ321'),  -- transfer
+(4, 10000004, 10000002, 750.00, 1, 'Elder John', 'JKL012', 'XYZ876'),  -- deposit
+(5, 10000005, 10000003, 1200.00, 2, 'XYZ Corp', 'MNO345', 'XYZ543');  -- withdrawal
 
 -- Insert employee positions
-INSERT INTO `position` (`name`, `available_action_id`, `description`)
+INSERT INTO `position` (`name`, `description`)
 VALUES 
-('Branch Manager', 1, 'Manager overseeing branch operations'),
-('Teller', 2, 'Responsible for day-to-day transactions'),
-('Loan Officer', 3, 'Handles loan applications and approvals'),
-('Security Officer', 4, 'Responsible for security and safety of the branch'),
-('Operations Manager', 5, 'Responsible for overall operations management'),
-('Technician', 6, 'Responsible for technical support');
+('Branch Manager', 'Manager overseeing branch operations'),
+('Teller', 'Responsible for day-to-day transactions'),
+('Loan Officer', 'Handles loan applications and approvals'),
+('Security Officer', 'Responsible for security and safety of the branch'),
+('Operations Manager', 'Responsible for overall operations management'),
+('Technician', 'Responsible for technical support');
 
 -- Insert employees
 INSERT INTO `employee` (`first_name`, `last_name`, `address`, `phone`, `nic`, `email`, `username`, `password`, `position_id`)
 VALUES 
 -- Managers (5 managers, one per branch)
-('Alice', 'Johnson', '101 Lakeview Rd, Hilltown', '011-555-6789', '567890123V', 'alice@example.com', 'alicejohnson', '$2a$10$AZUi6ySP0oW1VoNnPkRjnuqixJZd6Kf8d5WznprxoNN4oYaZFA9mS', 1), -- Manager of Head Office -- pass: password123
-('Bob', 'Williams', '250 Oakwood Dr, Greenfield', '011-555-1122', '987654321V', 'bob@example.com', 'bobwilliams', '$2a$10$mBkCUg3kSI.jR1WfcJPZjORiuQmM3YdMKjZuPnTLUXasmMp67lxiO', 1), -- Manager of North Branch  -- pass: password456
-('Charlie', 'Brown', '762 Cedar Ave, Roseville', '011-555-3344', '741258963V', 'charlie@example.com', 'charlieb', '$2a$10$tNjDCIrYTYpvNC.pOFOnUOUzqDN2GyM1Yek6ioVLC5ok5cvAOubWu', 1), -- Manager of South Branch  -- pass: password789
-('Diana', 'Smith', '333 Birch Ln, Maple Grove', '011-555-2233', '852741963V', 'diana@example.com', 'dianasmith', '$2a$10$dpvMriQ6oC20lvisTqVAlOsq2bYzbWOA5vBoWVnn1oh1XF95GIEUe', 1), -- Manager of East Branch  -- pass: password321
-('Edward', 'Johnson', '890 Pine Ridge St, Brookfield', '011-555-6677', '963258741V', 'edward@example.com', 'edwardjohnson', '$2a$10$akFR0k9YwkB1i8Go/xTfGuuizdEo3AIF.m7HKpyiHn9vbMCyBXhAy', 1), -- Manager of West Branch  -- pass: password654
+('Alice', 'Johnson', '101 Lakeview Rd, Hilltown', '0115556789', '567890123V', 'alice@example.com', 'alicejohnson', '$2a$10$AZUi6ySP0oW1VoNnPkRjnuqixJZd6Kf8d5WznprxoNN4oYaZFA9mS', 1), -- Manager of Head Office -- pass: password123
+('Bob', 'Williams', '250 Oakwood Dr, Greenfield', '0115551122', '987654321V', 'bob@example.com', 'bobwilliams', '$2a$10$mBkCUg3kSI.jR1WfcJPZjORiuQmM3YdMKjZuPnTLUXasmMp67lxiO', 1), -- Manager of North Branch  -- pass: password456
+('Charlie', 'Brown', '762 Cedar Ave, Roseville', '0115553344', '741258963V', 'charlie@example.com', 'charlieb', '$2a$10$tNjDCIrYTYpvNC.pOFOnUOUzqDN2GyM1Yek6ioVLC5ok5cvAOubWu', 1), -- Manager of South Branch  -- pass: password789
+('Diana', 'Smith', '333 Birch Ln, Maple Grove', '0115552233', '852741963V', 'diana@example.com', 'dianasmith', '$2a$10$dpvMriQ6oC20lvisTqVAlOsq2bYzbWOA5vBoWVnn1oh1XF95GIEUe', 1), -- Manager of East Branch  -- pass: password321
+('Edward', 'Johnson', '890 Pine Ridge St, Brookfield', '0115556677', '963258741V', 'edward@example.com', 'edwardjohnson', '$2a$10$akFR0k9YwkB1i8Go/xTfGuuizdEo3AIF.m7HKpyiHn9vbMCyBXhAy', 1), -- Manager of West Branch  -- pass: password654
 
 -- General Employees (12 employees in total)
-('Frank', 'White', '445 Aspen Ct, Silver Springs', '011-555-4455', '951753486V', 'frank@example.com', 'frankwhite', '$2a$10$AYq3gUc7hokkAaTlBgSCE.APRHc1YVbXXotYqgZqQbxBVun/8e3be', 2), -- Teller  -- password111
-('George', 'Adams', '567 Willow St, Elmwood', '011-555-8899', '789654123V', 'george@example.com', 'georgeadams', '$2a$10$7KS5PwgeLvmrrEzT8SggpeSNO8l3VZxqprG.NHmYBJrvbIIVA2glm', 2), -- Teller  -- password222
-('Henry', 'Miller', '789 Spruce Hill Rd, Sunnydale', '011-555-5566', '852456789V', 'henry@example.com', 'henrymiller', '$2a$10$29wqYcZodno6mit/hc2XNer.VvwG.4i5EpHto4krKNKLFewrX8NbG', 2), -- Teller  -- password333
-('Ivy', 'Brown', '120 Forest Creek Dr, Pinewood', '011-555-7788', '963741852V', 'ivy@example.com', 'ivybrown', '$2a$10$Oi1kd0WAEo5SikWuBYD30.1AoAnGtrzaStGEhI.MgvMjsaNElvmBO', 3), -- Loan Officer -- password444
-('Jack', 'Smith', '982 Magnolia Dr, Riverdale', '011-555-3344', '147258369V', 'jack@example.com', 'jacksmith', '$2a$10$.Z9FeGcSPUytEjSD5G6hEeqsjGj1VtlhXEEE0V0R2i54SRC5/XNyC', 3), -- Loan Officer -- password555
-('Kate', 'Moore', '348 Evergreen Blvd, Stonebridge', '011-555-9911', '654321789V', 'kate@example.com', 'katemoore', '$2a$10$o4Fif.wvnuTQRsHY58VQ5OzeXt8yccLo7XEbufR9xRBCiDlKs1Mde', 2), -- Teller -- password666
-('Liam', 'Stone', '576 Cherry Blossom Ln, Kingsport', '011-555-2277', '321654987V', 'liam@example.com', 'liamstone', '$2a$10$VLbACW1gEyqxY6UMLGucXe6aX0eV/DR9Wsl2aVqRqtVk9lG2qyR3i', 2), -- Teller -- password777
-('Michael', 'Parker', '823 Redwood St, Palm Beach', '011-555-4477', '741852963V', 'michael@example.com', 'michaelparker', '$2a$10$kd0N175zLRVxVRES04EaCuMe8eGb5QVMhoN.ZwKK99HuAD/FVCGbC', 4), -- Security Officer -- password888
-('Nancy', 'Davis', '104 Mountain View Ave, Clearbrook', '011-555-5599', '963258147V', 'nancy@example.com', 'nancydavis', '$2a$10$TLKZvY/fyl8Dr.njG0CZ3emI2R9LMDLFcryEfjDcHuFSMyGbETkRO', 4), -- Security Officer -- password999
-('Oscar', 'Wright', '679 Gardenia Ln, Meadowbrook', '011-555-6622', '258741963V', 'oscar@example.com', 'oscarwright', '$2a$10$IBN3Lxv6d31aCSxLR0mWUu6d/KndlqsQas9v66CFrpobEMXqNAl4O', 5), -- Operations Manager -- password000
-('Pamela', 'Evans', '234 Sunflower Dr, Sunnyside', '011-555-8822', '369258147V', 'pamela@example.com', 'pamelaevans', '$2a$10$4Q02H3dYwlU243OwBQnyPO2tGEHtjRF/8qpXWn2lMVfx4FSZHSsbG', 6), -- Technician -- password135;
-('Quinn', 'Fisher', '456 Rosewood Ave, Woodland', '011-555-1122', '147963258V', 'quinn@example.com', 'quinnfisher', '$2a$10$OyDSi7r34ZoBkRpj7npd8e0BZxTLzGZCLLwcRRGUl8N6GZyBVP.9G', 6); -- Technician -- password246;
+('Frank', 'White', '445 Aspen Ct, Silver Springs', '0115554455', '951753486V', 'frank@example.com', 'frankwhite', '$2a$10$AYq3gUc7hokkAaTlBgSCE.APRHc1YVbXXotYqgZqQbxBVun/8e3be', 2), -- Teller  -- password111
+('George', 'Adams', '567 Willow St, Elmwood', '0115558899', '789654123V', 'george@example.com', 'georgeadams', '$2a$10$7KS5PwgeLvmrrEzT8SggpeSNO8l3VZxqprG.NHmYBJrvbIIVA2glm', 2), -- Teller  -- password222
+('Henry', 'Miller', '789 Spruce Hill Rd, Sunnydale', '0115555566', '852456789V', 'henry@example.com', 'henrymiller', '$2a$10$29wqYcZodno6mit/hc2XNer.VvwG.4i5EpHto4krKNKLFewrX8NbG', 2), -- Teller  -- password333
+('Ivy', 'Brown', '120 Forest Creek Dr, Pinewood', '0115557788', '963741852V', 'ivy@example.com', 'ivybrown', '$2a$10$Oi1kd0WAEo5SikWuBYD30.1AoAnGtrzaStGEhI.MgvMjsaNElvmBO', 3), -- Loan Officer -- password444
+('Jack', 'Smith', '982 Magnolia Dr, Riverdale', '0115553344', '147258369V', 'jack@example.com', 'jacksmith', '$2a$10$.Z9FeGcSPUytEjSD5G6hEeqsjGj1VtlhXEEE0V0R2i54SRC5/XNyC', 3), -- Loan Officer -- password555
+('Kate', 'Moore', '348 Evergreen Blvd, Stonebridge', '0115559911', '654321789V', 'kate@example.com', 'katemoore', '$2a$10$o4Fif.wvnuTQRsHY58VQ5OzeXt8yccLo7XEbufR9xRBCiDlKs1Mde', 2), -- Teller -- password666
+('Liam', 'Stone', '576 Cherry Blossom Ln, Kingsport', '0115552277', '321654987V', 'liam@example.com', 'liamstone', '$2a$10$VLbACW1gEyqxY6UMLGucXe6aX0eV/DR9Wsl2aVqRqtVk9lG2qyR3i', 2), -- Teller -- password777
+('Michael', 'Parker', '823 Redwood St, Palm Beach', '0115554477', '741852963V', 'michael@example.com', 'michaelparker', '$2a$10$kd0N175zLRVxVRES04EaCuMe8eGb5QVMhoN.ZwKK99HuAD/FVCGbC', 4), -- Security Officer -- password888
+('Nancy', 'Davis', '104 Mountain View Ave, Clearbrook', '0115555599', '963258147V', 'nancy@example.com', 'nancydavis', '$2a$10$TLKZvY/fyl8Dr.njG0CZ3emI2R9LMDLFcryEfjDcHuFSMyGbETkRO', 4), -- Security Officer -- password999
+('Oscar', 'Wright', '679 Gardenia Ln, Meadowbrook', '0115556622', '258741963V', 'oscar@example.com', 'oscarwright', '$2a$10$IBN3Lxv6d31aCSxLR0mWUu6d/KndlqsQas9v66CFrpobEMXqNAl4O', 5), -- Operations Manager -- password000
+('Pamela', 'Evans', '234 Sunflower Dr, Sunnyside', '0115558822', '369258147V', 'pamela@example.com', 'pamelaevans', '$2a$10$4Q02H3dYwlU243OwBQnyPO2tGEHtjRF/8qpXWn2lMVfx4FSZHSsbG', 6), -- Technician -- password135;
+('Quinn', 'Fisher', '456 Rosewood Ave, Woodland', '0115551122', '147963258V', 'quinn@example.com', 'quinnfisher', '$2a$10$OyDSi7r34ZoBkRpj7npd8e0BZxTLzGZCLLwcRRGUl8N6GZyBVP.9G', 6); -- Technician -- password246;
 
 -- Insert managers and employees related to branches
 INSERT INTO `manager_employee` (`manager_id`, `branch_id`)
@@ -543,3 +560,17 @@ VALUES
 ('Physical Security Check', 'Perform a physical security check at the branch'),
 ('Manage Operations', 'Manage day-to-day operations at the branch'),
 ('Technical Support', 'Provide technical support for branch systems');
+
+INSERT INTO `position_action` (`position_id`, `action_id`) 
+VALUES 
+(1, 1), -- Branch Manager can Approve Loan
+(1, 2), -- Branch Manager can Deny Loan
+(1, 5), -- Branch Manager can Manage Operations
+
+(3, 1), -- Loan Officer can Approve Loan
+(3, 2), -- Loan Officer can Deny Loan
+
+(2, 3), -- Teller can Transfer Funds
+(4, 4), -- Security Officer can Perform Physical Security Check
+
+(6, 6); -- Technician can Provide Technical Support
