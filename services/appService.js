@@ -22,6 +22,8 @@ app.use('/loans', loanRoutes);
 app.use('/branch-management', branchManagementRoutes);
 
 
+// use the employee routes
+app.use('/employee', employeeRoutes);
 // use the customer account routes
 app.use('/customer-account', customerAccountRoutes);
 // use the transaction routes
