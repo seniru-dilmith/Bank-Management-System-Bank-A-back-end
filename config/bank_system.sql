@@ -1,3 +1,7 @@
+DROP DATABASE IF EXISTS `bank_system`;
+CREATE DATABASE `bank_system`;
+USE `bank_system`;
+
 -- Create account_type table
 CREATE TABLE `account_type` (
   `id` INT AUTO_INCREMENT,

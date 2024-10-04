@@ -44,26 +44,25 @@ class Employee {
         await db.query(query, [employeeId, branch_id, supervisor_id]);
     }
 
-    // Update an employee
-    static async update(id, { first_name, last_name, address, phone, nic, email, username, password, position_id }) {
-        const query = `
-            UPDATE employee
-            SET first_name = ?, last_name = ?, address = ?, phone = ?, nic = ?, email = ?, username = ?, password = ?, position_id = ?
-            WHERE id = ?
-        `;
-        await db.query(query, [first_name, last_name, address, phone, nic, email, username, password, position_id, id]);
+    static async updatePassword(id, password) {
+        const query = 'UPDATE employee SET password = ? WHERE id = ?';
+        await db.query(query, [password, id]);
+    }
+
+    static async updateName(id, first_name, last_name) {
+        const query = 'UPDATE employee SET first_name = ?, last_name = ? WHERE id = ?';
+        await db.query(query, [first_name, last_name, id]);
+    }
+
+    static async updateAddress(id, address) {
+        const query = 'UPDATE employee SET address = ? WHERE id = ?';
+        await db.query(query, [address, id]);
     }
 
     // Update manager branch in `manager_employee` table
     static async updateManagerBranch(managerId, branch_id) {
         const query = 'UPDATE manager_employee SET branch_id = ? WHERE manager_id = ?';
         await db.query(query, [branch_id, managerId]);
-    }
-
-    // Update general employee branch and supervisor in `general_employee` table
-    static async updateGeneralEmployee(employeeId, branch_id, supervisor_id) {
-        const query = 'UPDATE general_employee SET branch_id = ?, supervisor_id = ? WHERE employee_id = ?';
-        await db.query(query, [branch_id, supervisor_id, employeeId]);
     }
 
     // Delete an employee
