@@ -23,6 +23,12 @@ class Branch {
         return branch[0];
     }
 
+    static async findByName(name) {
+        const query = 'SELECT id FROM branch WHERE name = ?';
+        const [branch] = await db.query(query, [name]);
+        return branch[0];
+    }
+
     static async delete(id) {
         const query = 'DELETE FROM branch WHERE id = ?';
         await db.query(query, [id]);
