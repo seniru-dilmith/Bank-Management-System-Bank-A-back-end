@@ -49,8 +49,10 @@ exports.updateEmployee = async (req, res) => {
     }
 
     const { id, first_name, last_name, address, phone, nic, email, username, password, position_id, branch_id } = req.body;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
     try {
-        await Employee.update(id, { first_name, last_name, address, phone, nic, email, username, password, position_id });
+        await Employee.update(id, { first_name, last_name, address, phone, nic, email, username, password:hashedPassword, position_id });
 
         if (position_id === 1) {
             // Update manager branch in manager_employee table
