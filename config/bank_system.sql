@@ -578,3 +578,4 @@ VALUES
 (4, 4), -- Security Officer can Perform Physical Security Check
 
 (6, 6); -- Technician can Provide Technical Support
+
