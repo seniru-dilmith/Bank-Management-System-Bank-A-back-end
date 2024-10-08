@@ -1,5 +1,5 @@
-const db = require('../config/db');
 const { validationResult } = require('express-validator');
+const Branch = require('../models/Branch');
 
 // Controller function to get branches
 exports.getBranches = async (req, res) => {
@@ -9,11 +9,9 @@ exports.getBranches = async (req, res) => {
     }
 
     try {
-        const query = 'SELECT id, name, branch_address, contact_number FROM branch';
-        const [branches] = await db.query(query);  // Execute the query to get all branches
+        const branches = await Branch.findAll();
         res.json(branches);
-    }
-    catch (error) {
+    } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Server failed during fetching branches' });
     }
@@ -28,15 +26,8 @@ exports.addBranch = async (req, res) => {
 
     const { name, branch_address, contact_number } = req.body;  // Get the branch details from the request body
     try {
-        const query = `
-        INSERT INTO branch (name, branch_address, contact_number) 
-        VALUES 
-        (?, ?, ?)
-        `;  // Query to insert a new branch
-
-        await db.query(query, [name, branch_address, contact_number]);  // Execute the query to insert a new branch
+        await Branch.create({ name, branch_address, contact_number });
         res.json({ msg: 'Branch created successfully' });
-
     } catch (error) {
         console.error(error);
         return res.status(500).json({ msg: 'Server failed during branch creation' });
@@ -49,21 +40,12 @@ exports.updateBranch = async (req, res) => {
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-
-    const { id, name, branch_address, contact_number } = req.body;  // Get the branch details from the request body
-
+    
+    const { currentName, newName, branch_address, contact_number } = req.body;  // Get the branch details from the request body
+    
     try {
-        const query = `
-        UPDATE branch 
-        SET name = ?, 
-        branch_address = ?, 
-        contact_number = ?
-        WHERE id = ?
-        `;
-
-        await db.query(query, [name, branch_address, contact_number, id]); // Execute the query to update the branch
+        await Branch.update(id, { currentName, newName, branch_address, contact_number });
         res.json({ msg: 'Branch updated successfully' });
-
     } catch (error) {
         console.error(error);
         return res.status(500).json({ msg: 'Server failed during branch update' });
@@ -72,21 +54,17 @@ exports.updateBranch = async (req, res) => {
 
 exports.removeBranch = async (req, res) => {
     const { id } = req.params;  // Get the branch ID from the request parameters
-
     try {
-        const [branch] = await db.query('SELECT * FROM branch WHERE id = ?', [id]);  // Query to get the branch details
+        const branch = await Branch.findById(id);
 
-        const query = `
-        DELETE FROM branch
-        WHERE id = ?
-        `;
+        if (!branch) {
+            return res.status(404).json({ msg: 'Branch not found' });
+        }
 
-        db.query(query, [id]); // Execute the query to delete the branch
-
-        res.json({ msg: `Branch '${branch[0].name}' deleted successfully` });
-    }
-    catch (error) {
+        await Branch.delete(id);
+        res.json({ msg: `Branch '${branch.name}' deleted successfully` });
+    } catch (error) {
         console.error(error);
         return res.status(500).json({ msg: 'Server failed during branch deletion' });
     }
-}
+};

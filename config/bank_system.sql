@@ -1,3 +1,7 @@
+DROP DATABASE IF EXISTS `bank_system`;
+CREATE DATABASE `bank_system`;
+USE `bank_system`;
+
 -- Create account_type table
 CREATE TABLE `account_type` (
   `id` INT AUTO_INCREMENT,
@@ -574,3 +578,4 @@ VALUES
 (4, 4), -- Security Officer can Perform Physical Security Check
 
 (6, 6); -- Technician can Provide Technical Support
+
