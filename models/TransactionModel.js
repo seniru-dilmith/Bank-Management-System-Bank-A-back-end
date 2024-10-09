@@ -1,7 +1,7 @@
-// models/employeeModel.js
+// models/transactionModel.js
 const db = require('../config/db');
 
-// Get all employees
+// Get all transactions
 const getRcentTransactions = async () => {
   const query = `SELECT 
   tr.timestamp as Date,
@@ -17,7 +17,41 @@ const getRcentTransactions = async () => {
   return transactions;
 };
 
-// Get an employee by ID
+// Get all transactions
+const getRcentTransactionsByBranchId = async (branchId) => {
+  const query = `SELECT 
+  tr.timestamp as Date,
+  tt.name as TransactionType,
+  tt.description as Description,
+  tr.amount as Amount
+ FROM 
+   transaction tr
+ INNER JOIN transaction_type tt
+   ON tt.id = tr.transaction_type_id
+ INNER JOIN account ac
+   ON ac.account_number = tr.from_account_number
+  WHERE ac.branch_id = ?
+ ORDER BY tr.timestamp DESC LIMIT 5;`;
+   const [transactions] = await db.query(query, [branchId]); 
+  return transactions;
+};
+
+// Get all transactions
+const getRcentTransactionsByCustomerId = async (customerId) => {
+  const query = `SELECT 
+  tr.timestamp as Date,
+  tt.name as TransactionType,
+  tt.description as Description,
+  tr.amount as Amount
+ FROM 
+   transaction tr
+ INNER JOIN transaction_type tt
+   ON tt.id = tr.transaction_type_id WHERE tr.customer_id = ?;`;
+   const [transactions] = await db.query(query, [customerId]); 
+  return transactions;
+};
+
+// Get an transaction by ID
 const getTransaction = async (id) => {
   const query = `SELECT 
   tr.timestamp as Date,
@@ -34,7 +68,7 @@ const getTransaction = async (id) => {
 
 
 
-// Create a new employee
+// Create a new transaction
 const addTransaction = async (customerId, fromAccountId, toAccountId, amount, transactionTypeId) => {
     // SQL query to insert a new transaction
     const query = `
@@ -45,7 +79,7 @@ const addTransaction = async (customerId, fromAccountId, toAccountId, amount, tr
     return result.insertId;
 };
 
-// Update an employee
+// Update an transaction
 const updateTransaction = async (transactionId, amount, transactionTypeId) => {
   
 
@@ -59,7 +93,7 @@ const updateTransaction = async (transactionId, amount, transactionTypeId) => {
   return result;
 };
 
-// Delete an employee
+// Delete an transaction
 const deleteTransaction = async (transactionId) => {
   // SQL query to delete the transaction
   const query = `
@@ -73,6 +107,8 @@ const [result] = await db.query(query, [transactionId]);
 module.exports = {
   getRcentTransactions,
   getTransaction,
+  getRcentTransactionsByBranchId,
+  getRcentTransactionsByCustomerId,
   addTransaction,
   updateTransaction,
   deleteTransaction

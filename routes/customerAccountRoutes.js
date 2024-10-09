@@ -1,16 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const customerAccountController = require('../controllers/customerAccountController');
-// const { authMiddleware } = require('../middleware/authMiddleware'); // Protected routes
+const { getCustomerAccounts,
+    getCustomerAccount,
+    addCustomerAccount,
+    updateCustomerAccount,
+    deleteCustomerAccount} = require('../controllers/customerAccountController');
+// const { authenticateToken } = require('../middlewares/authMiddleware'); // Protected routes
 
 // Routes for customerAccount management
-router.get('/summaries', customerAccountController.getCustomerAccounts);   // Get all customerAccounts
-router.get('/summaries/:id', customerAccountController.getCustomerAccount); // Get customerAccount by ID
+router.get('/summaries', getCustomerAccounts);   // Get all customerAccounts
+router.get('/summaries/:id', getCustomerAccount); // Get customerAccount by ID
 // Add a new customer account
-router.post('/', customerAccountController.addCustomerAccount);
+router.post('/add', addCustomerAccount);
 // Update customer account
-router.put('/:id', customerAccountController.updateCustomerAccount);
+router.put('/update/:id', updateCustomerAccount);
 // Delete customer account
-router.delete('/:id', customerAccountController.deleteCustomerAccount);
+router.delete('/delete/:id', deleteCustomerAccount);
+
 
 module.exports = router;

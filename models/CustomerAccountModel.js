@@ -13,9 +13,30 @@ FROM
 INNER JOIN 
   customer cu ON cu.id = ac.customer_id
 INNER JOIN 
-  account_type act ON ac.customer_id = act.id;`;
+  account_type act ON ac.account_type_id = act.id;`;
 
   const [customerAccounts] = await db.query(query); 
+
+  return customerAccounts;
+};
+
+// Get all CustomerAccounts
+const getCustomerAccountsByBranch = async (id) => {
+  
+  const query = `SELECT 
+  cu.first_name || ' ' || cu.last_name AS AccountHolderName,
+  ac.account_number AS AccountNumber,
+  act.name AS AccountType,
+  ac.acc_balance AS Balance
+FROM 
+  account ac
+INNER JOIN 
+  customer cu ON cu.id = ac.customer_id
+INNER JOIN 
+  account_type act ON ac.account_type_id = act.id
+WHERE ac.branch_id = ?;`;
+
+  const [customerAccounts] = await db.query(query,[id]); 
 
   return customerAccounts;
 };
@@ -32,7 +53,7 @@ FROM
 INNER JOIN 
   customer cu ON cu.id = ac.customer_id
 INNER JOIN 
-  account_type act ON ac.customer_id = act.id WHERE ac.account_number = ?;`;
+  account_type act ON ac.account_type_id = act.id WHERE ac.account_number = ?;`;
 
   const [result] = await db.query(query, [id]);
     return result[0];
@@ -77,6 +98,7 @@ const [result] = await db.query(query, [customerAccountId]);
 
 module.exports = {
   getCustomerAccounts,
+  getCustomerAccountsByBranch,
   getCustomerAccount,
   addCustomerAccount,
   updateCustomerAccount,

@@ -27,8 +27,8 @@ const getBranchManagerById = async (req, res) => {
   const branch_id = req.params.id;
 
   try {
-    const [branchManager] = await branchManagerModel.getBranchById(branch_id);
-    if (!branchManager.length) {
+    const branchManager = await branchManagerModel.getBranchById(branch_id);
+    if (!branchManager) {
       return res.status(404).send({ message: 'Branch Manager not found' });
     }
     res.status(200).json(branchManager);

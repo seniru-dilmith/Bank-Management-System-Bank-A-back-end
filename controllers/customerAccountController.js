@@ -14,6 +14,20 @@ const getCustomerAccounts = async (req, res) => {
   }
 };
 
+
+// Get all customerAccounts by Branch
+const getCustomerAccountsByBranch = async (req, res) => {
+  const { branchId } = req.params;
+  try {
+   
+   const  customerAccounts = await customerAccountModel.getCustomerAccountsByBranch(branchId);
+
+    res.status(200).json(customerAccounts);
+  } catch (err) {
+    res.status(500).send({ message: 'Error fetching customerAccounts', error: err.message });
+  }
+};
+
 // Get an customerAccount by ID
 const getCustomerAccount = async (req, res) => {
   const customerAccountId = req.params.id;
@@ -84,6 +98,7 @@ const deleteCustomerAccount = async (req, res) => {
 
 module.exports = {
   getCustomerAccounts,
+  getCustomerAccountsByBranch,
   getCustomerAccount,
   addCustomerAccount,
   updateCustomerAccount,

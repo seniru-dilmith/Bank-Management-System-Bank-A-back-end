@@ -54,7 +54,7 @@ const getManagerEmployeesByBranchId = async (req, res) => {
 const getEmployee = async (req, res) => {
   const employeeId = req.params.id;
   try {
-    const employee = await  employeeModel.getEmployee(employeeId);
+    const employee = await  employeeModel.getEmployeeById(employeeId);
     if (!employee) {
       return res.status(404).send({ message: 'Employee not found' });
     }

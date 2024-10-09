@@ -28,6 +28,8 @@ app.use('/employee', employeeRoutes);
 app.use('/customer-account', customerAccountRoutes);
 // use the transaction routes
 app.use('/transaction', transactionRoutes);
+// use the branch-manager routes
+app.use('/branch-manager', branchManagerRoutes);
 
 // sample protected route
 app.get('/protected', authMiddleware, (req, res) => {
