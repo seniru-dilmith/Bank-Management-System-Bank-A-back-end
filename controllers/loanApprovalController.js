@@ -1,16 +1,9 @@
-const db = require('../config/db');
+const LoanApproval = require('../models/LoanApproval');
 
 // Controller to list all pending loan applications
 exports.getPendingLoans = async (req, res) => {
     try {
-        // Query to get all loans with status 'pending'
-        const [loans] = await db.query(`
-            SELECT loan.id AS loanId, loan_type.type_name AS loanType, loan.loan_amount, loan.loan_term, concat(customer.first_name, ' ', customer.last_name) AS customerName, loan.status
-            FROM loan
-            JOIN loan_type ON loan.type_id = loan_type.id
-            JOIN customer ON loan.customer_id = customer.id
-            WHERE loan.status = 'pending'
-        `);
+        const loans = await LoanApproval.findPendingLoans();
 
         if (loans.length === 0) {
             return res.status(404).json({ msg: 'No pending loan applications found' });
@@ -34,12 +27,7 @@ exports.updateLoanStatus = async (req, res) => {
     try {
         const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
-        // Query to update the loan status
-        const [result] = await db.query(`
-            UPDATE loan
-            SET status = ?
-            WHERE id = ? AND status = 'pending'`,
-            [newStatus, loanId]);
+        const result = await LoanApproval.updateLoanStatus(loanId, newStatus);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ msg: 'Loan application not found or already processed' });
