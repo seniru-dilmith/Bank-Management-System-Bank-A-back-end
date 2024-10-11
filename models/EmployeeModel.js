@@ -37,14 +37,6 @@ const getManagerEmployeesByBranchId = async (branchId) =>{
   return employees;
 };
 
-// Create a new employee
-const createEmployee = async (employeeData) => {
-    const query = `INSERT INTO employee (first_name, last_name, address, phone, nic, email, username, password, position_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    const { first_name, last_name, address, phone, nic, email, username, password, position_id } = employeeData;
-    const [result] = await db.query(query, [first_name, last_name, address, phone, nic, email, username, password, position_id]);
-    return result.insertId;
-};
 
 // Update an employee
 const updateEmployee = async (id, employeeData) => {
@@ -69,7 +61,6 @@ module.exports = {
   getEmployeeById,
   getGeneralEmployeesByBranchId,
   getManagerEmployeesByBranchId,
-  createEmployee,
   updateEmployee,
   deleteEmployee
 };

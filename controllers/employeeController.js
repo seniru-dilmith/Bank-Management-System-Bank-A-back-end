@@ -64,18 +64,6 @@ const getEmployee = async (req, res) => {
   }
 };
 
-// Create a new employee
-const createEmployee = async (req, res) => {
-  const newEmployee = req.body;
-  try {
-  
-    const employeeId = await  employeeModel.createEmployee(newEmployee);
-    res.status(201).send({ message: 'Employee created', employeeId });
-  } catch (err) {
-    res.status(500).send({ message: 'Error creating employee', error: err.message });
-  }
-};
-
 // Update an employee
 const updateEmployee = async (req, res) => {
   const employeeId = req.params.id;
@@ -108,7 +96,6 @@ module.exports = {
   getGeneralEmployeesByBranchId,
   getManagerEmployeesByBranchId,
   getEmployee,
-  createEmployee,
   updateEmployee,
   deleteEmployee
 };
