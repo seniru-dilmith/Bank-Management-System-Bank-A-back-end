@@ -5,7 +5,7 @@ const db = require('../config/db');
 const getCustomerAccountsByBranch = async (id) => {
   
   const query = `SELECT 
-  cu.first_name || ' ' || cu.last_name AS AccountHolderName,
+ CONCAT(cu.first_name, ' ', cu.last_name)   AS AccountHolderName,
   ac.account_number AS AccountNumber,
   act.name AS AccountType,
   ac.acc_balance AS Balance
