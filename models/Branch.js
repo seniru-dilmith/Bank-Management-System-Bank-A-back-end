@@ -12,9 +12,9 @@ class Branch {
         await db.query(query, [name, branch_address, contact_number]);
     }
 
-    static async update(id, { name, branch_address, contact_number }) {
-        const query = 'UPDATE branch SET name = ?, branch_address = ?, contact_number = ? WHERE id = ?';
-        await db.query(query, [name, branch_address, contact_number, id]);
+    static async update({ currentName, newName, branch_address, contact_number }) {
+        const query = 'UPDATE branch SET name = ?, branch_address = ?, contact_number = ? WHERE name = ?';
+        await db.query(query, [newName, branch_address, contact_number, currentName]);
     }
 
     static async findById(id) {

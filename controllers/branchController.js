@@ -44,7 +44,7 @@ exports.updateBranch = async (req, res) => {
     const { currentName, newName, branch_address, contact_number } = req.body;  // Get the branch details from the request body
     
     try {
-        await Branch.update(id, { currentName, newName, branch_address, contact_number });
+        await Branch.update({ currentName, newName, branch_address, contact_number });
         res.json({ msg: 'Branch updated successfully' });
     } catch (error) {
         console.error(error);
