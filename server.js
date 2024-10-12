@@ -1,7 +1,8 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const customerDetails = require('./routes/customerDetails');
-const appService = require('./services/appService');
+const appService = require('./services/appService')
+
 
 // Load environment variables from .env file
 dotenv.config();
