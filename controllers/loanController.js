@@ -42,13 +42,8 @@ exports.requestLoan = async (req, res) => {
             return res.status(403).json({ msg: 'Only customers can request a loan.' });
         }
 
-        // Query to insert the loan request into the database
-        const query = `
-            INSERT INTO loan (customer_id, type_id, loan_amount, loan_term, status)
-            VALUES (?, ?, ?, ?, 'pending')
-        `;
-
-        await db.query(query, [customerId, loanType, amount, duration]);
+        // Use Loan model to submit loan request
+        await Loan.requestLoan({ customerId, loanType, amount, duration });
 
         res.status(201).json({ msg: 'Loan request submitted successfully!' });
     } catch (error) {
@@ -59,6 +54,7 @@ exports.requestLoan = async (req, res) => {
 
 // Controller function to get details of a specific loan application
 exports.getLoanDetails = async (req, res) => {
+    // Validate input data
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -73,25 +69,15 @@ exports.getLoanDetails = async (req, res) => {
             return res.status(403).json({ msg: 'Only customers can view loan application details.' });
         }
 
-        // Query to get loan details including loan type, loan status, and application status
-        const loanDetailsQuery = `
-            SELECT l.id AS loanId, 
-                   lt.type_name AS loanType, 
-                   l.status AS loanStatus, 
-                   l.start_date AS applicationDate
-            FROM loan l
-            JOIN loan_type lt ON l.type_id = lt.id
-            WHERE l.customer_id = ? AND l.id = ?
-        `;
+        // Use Loan model to get loan details
+        const loanDetails = await Loan.getLoanDetails(customerId, loanId);
 
-        const [loanDetails] = await db.query(loanDetailsQuery, [customerId, loanId]);
-
-        if (loanDetails.length === 0) {
+        if (!loanDetails) {
             return res.status(404).json({ msg: 'No loan found with this ID for the customer' });
         }
 
         // Return the loan details
-        res.json(loanDetails[0]);
+        res.json(loanDetails);
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Server error during loan details retrieval' });
