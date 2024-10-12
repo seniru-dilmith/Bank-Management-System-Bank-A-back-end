@@ -1,10 +1,10 @@
 const db = require('../config/db');
 const transactionModel = require('../models/TransactionModel');
-
-
+const { validationResult } = require('express-validator');
+const Transaction = require('../models/Transaction');
 
 // Get all transactions by branch Id
-const getRcentTransactionsByBranchId = async (req, res) => {
+exports.getRecentTransactionsByBranchId = async (req, res) => {
   const { branchId } = req.params; // branchId is a route parameter
   try {
    
@@ -17,7 +17,7 @@ const getRcentTransactionsByBranchId = async (req, res) => {
 };
 
 // Get all transactions by customer Id
-const getRcentTransactionsByCustomerId = async (req, res) => {
+exports.getRecentTransactionsByCustomerId = async (req, res) => {
   const { customerId } = req.params; // branchId is a route parameter
   try {
    
@@ -28,17 +28,6 @@ const getRcentTransactionsByCustomerId = async (req, res) => {
     res.status(500).send({ message: 'Error fetching transactions', error: err.message });
   }
 };
-
-
-
-module.exports = {
-  getRcentTransactionsByBranchId,
-  getRcentTransactionsByCustomerId,
-};
-=======
-const db = require('../config/db');
-const { validationResult } = require('express-validator');
-const Transaction = require('../models/Transaction');
 
 // Controller to get recent transactions (for employees only)
 exports.getAllRecentTransactions = async (req, res) => {

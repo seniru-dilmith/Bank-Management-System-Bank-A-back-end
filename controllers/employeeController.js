@@ -1,7 +1,10 @@
 const employeeModel = require('../models/EmployeeModel');
+const Employee = require('../models/Employee');
+const { validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
 
 // Get all employees
-const getEmployees = async (req, res) => {
+exports.getEmployees = async (req, res) => {
   try {
 
   const employees = await  employeeModel.getAllEmployees();
@@ -15,7 +18,7 @@ const getEmployees = async (req, res) => {
 
 
 // Get general employees by branch ID
-const getGeneralEmployeesByBranchId = async (req, res) => {
+exports.getGeneralEmployeesByBranchId = async (req, res) => {
   const { branchId } = req.params; // branchId is a route parameter
   try {
    
@@ -32,7 +35,7 @@ const getGeneralEmployeesByBranchId = async (req, res) => {
 };
 
 // Get manager employees by branch ID
-const getManagerEmployeesByBranchId = async (req, res) => {
+exports.getManagerEmployeesByBranchId = async (req, res) => {
   const { branchId } = req.params; // branchId is a route parameter
   try {
    
@@ -48,7 +51,7 @@ const getManagerEmployeesByBranchId = async (req, res) => {
 };
 
 // Get an employee by ID
-const getEmployee = async (req, res) => {
+exports.getEmployee = async (req, res) => {
   const employeeId = req.params.id;
   try {
     const employee = await  employeeModel.getEmployeeById(employeeId);
@@ -62,7 +65,7 @@ const getEmployee = async (req, res) => {
 };
 
 // Update an employee
-const updateEmployee = async (req, res) => {
+exports.updateEmployee = async (req, res) => {
   const employeeId = req.params.id;
   const updatedData = req.body;
   try {
@@ -76,7 +79,7 @@ const updateEmployee = async (req, res) => {
 };
 
 // Delete an employee
-const deleteEmployee = async (req, res) => {
+exports.deleteEmployee = async (req, res) => {
   const employeeId = req.params.id;
   try {
    
@@ -87,18 +90,6 @@ const deleteEmployee = async (req, res) => {
     res.status(500).send({ message: 'Error deleting employee', error: err.message });
   }
 };
-
-module.exports = {
-  getEmployees,
-  getGeneralEmployeesByBranchId,
-  getManagerEmployeesByBranchId,
-  getEmployee,
-  updateEmployee,
-  deleteEmployee
-=======
-const Employee = require('../models/Employee');
-const { validationResult } = require('express-validator');
-const bcrypt = require('bcryptjs');
 
 // Controller function to get all employees
 exports.getEmployees = async (req, res) => {

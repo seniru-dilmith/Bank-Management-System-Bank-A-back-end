@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { technicianMiddleware } = require('../middleware/technicianMiddleware');
-const { getEmployees, addEmployee, updateEmployee, removeEmployee } = require('../controllers/employeeController');
 const { addEmployeeValidation, updateEmployeeValidation } = require('../validations/employeeValidation');
 const { getEmployees, addEmployee, updateEmployee, removeEmployee, getGeneralEmployeesByBranchId, getManagerEmployeesByBranchId, getEmployee, deleteEmployee } = require('../controllers/employeeController');
 
