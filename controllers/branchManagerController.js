@@ -2,7 +2,7 @@ const branchManagerModel = require('../models/BranchManagerModel');
 
 
 // Get a Branch Manager by Branch ID
-const getBranchManagerById = async (req, res) => {
+exports.getBranchManagerById = async (req, res) => {
   const branch_id = req.params.id;
 
   try {
@@ -17,7 +17,7 @@ const getBranchManagerById = async (req, res) => {
 };
 
 // Update a Branch Manager by Branch ID
-const updateBranchManager = async (req, res) => {
+exports.updateBranchOfManager = async (req, res) => {
   const branch_id = req.params.id;
   const branchData = req.body;
 
@@ -30,10 +30,4 @@ const updateBranchManager = async (req, res) => {
   } catch (err) {
     res.status(500).send({ message: 'Error updating Branch Manager', error: err.message });
   }
-};
-
-
-module.exports = {
-  getBranchManagerById,
-  updateBranchManager,
 };

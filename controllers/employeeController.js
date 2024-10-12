@@ -54,7 +54,7 @@ exports.getManagerEmployeesByBranchId = async (req, res) => {
 exports.getEmployee = async (req, res) => {
   const employeeId = req.params.id;
   try {
-    const employee = await  employeeModel.getEmployeeById(employeeId);
+    const employee = await employeeModel.getEmployeeById(employeeId);
     if (!employee) {
       return res.status(404).send({ message: 'Employee not found' });
     }
@@ -65,7 +65,7 @@ exports.getEmployee = async (req, res) => {
 };
 
 // Update an employee
-exports.updateEmployee = async (req, res) => {
+exports.updateEmployeeFromId = async (req, res) => {
   const employeeId = req.params.id;
   const updatedData = req.body;
   try {

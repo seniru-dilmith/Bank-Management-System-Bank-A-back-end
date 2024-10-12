@@ -32,11 +32,6 @@ exports.getRecentTransactionsByCustomerId = async (req, res) => {
 // Controller to get recent transactions (for employees only)
 exports.getAllRecentTransactions = async (req, res) => {
     try {
-        // Ensure that only employees can access this route
-        if (req.user.userType !== 'employee') {
-            return res.status(403).json({ msg: 'Access denied. Only employees can view recent transactions.' });
-        }
-
         // Use the Transaction model to fetch recent transactions
         const transactions = await Transaction.getAllRecentTransactions();
 

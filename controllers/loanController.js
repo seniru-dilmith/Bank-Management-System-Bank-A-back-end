@@ -37,11 +37,6 @@ exports.requestLoan = async (req, res) => {
         const { loanType, amount, duration } = req.body;
         const customerId = req.user.id;  // Get the current logged-in customer's ID
 
-        // Ensure only customers can request a loan
-        if (req.user.userType !== 'customer') {
-            return res.status(403).json({ msg: 'Only customers can request a loan.' });
-        }
-
         // Use Loan model to submit loan request
         await Loan.requestLoan({ customerId, loanType, amount, duration });
 
@@ -63,11 +58,6 @@ exports.getLoanDetails = async (req, res) => {
     try {
         const loanId = req.params.id; // Get loan ID from URL params
         const customerId = req.user.id; // Get the customer ID from the JWT token
-
-        // Ensure only customers can view loan application details
-        if (req.user.userType !== 'customer') {
-            return res.status(403).json({ msg: 'Only customers can view loan application details.' });
-        }
 
         // Use Loan model to get loan details
         const loanDetails = await Loan.getLoanDetails(customerId, loanId);
