@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const {
-    getBranchManagerById,
-    updateBranchManager,} = require('../controllers/branchManagerController');
-// const { authenticateToken } = require('../middlewares/authMiddleware'); // Protected routes
+const { getBranchManagerById, updateBranchOfManager } = require('../controllers/branchManagerController');
+const { authMiddleware } = require('../middleware/authMiddleware');
+const { branchManagerMiddleware } = require('../middleware/branchManagerMiddleware');
 
 // Routes for BranchManager management
-router.get('/get-branch/:id', getBranchManagerById); // Get BranchManager by ID
-router.put('/update/:id',updateBranchManager); // Update BranchManager
+router.get('/get-branch/:id', authMiddleware, branchManagerMiddleware, getBranchManagerById); // Get BranchManager by ID
+
+router.put('/update/:id', authMiddleware, branchManagerMiddleware, updateBranchOfManager); // Update Branch details of a specific BranchManager
 
 module.exports = router;

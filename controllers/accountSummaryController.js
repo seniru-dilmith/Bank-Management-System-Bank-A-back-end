@@ -2,10 +2,6 @@ const Account = require('../models/Account');
 
 // Controller to get account summary for the logged-in user
 exports.getAccountSummary = async (req, res) => {
-    // Check if the user is a customer and not an employee
-    if (req.user.userType !== 'customer') {
-        return res.status(400).json({ msg: 'This is for customers only' });
-    }
     
     const customerId = req.user.id;  // Get customer ID from JWT
 
