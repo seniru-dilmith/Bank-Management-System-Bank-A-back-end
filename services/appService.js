@@ -4,6 +4,8 @@ const authRoutes = require('../routes/authRoutes');
 const loanRoutes = require('../routes/loanRoutes');
 const branchManagementRoutes = require('../routes/branchManagementRoutes');
 const customerAccountRoutes = require('../routes/customerAccountRoutes');
+const employeeRoutes = require('../routes/employeeRoutes');
+const branchManagerRoutes = require('../routes/branchManagerRoutes');
 const transactionRoutes = require('../routes/transactionRoutes');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
