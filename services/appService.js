@@ -3,7 +3,9 @@ const dotenv = require('dotenv');
 const authRoutes = require('../routes/authRoutes');
 const loanRoutes = require('../routes/loanRoutes');
 const branchManagementRoutes = require('../routes/branchManagementRoutes');
+const customerAccountRoutes = require('../routes/customerAccountRoutes');
 const employeeRoutes = require('../routes/employeeRoutes');
+const branchManagerRoutes = require('../routes/branchManagerRoutes');
 const loanApprovalRoutes = require('../routes/loanApprovalRoutes');
 const accountSummaryRoutes = require('../routes/accountSummaryRoutes'); 
 const transactionRoutes = require('../routes/transactionRoutes');
@@ -26,6 +28,14 @@ app.use('/transactions', transactionRoutes);
 // use the branch management routes
 app.use('/branch-management', branchManagementRoutes);
 
+// use the employee routes
+app.use('/employee', employeeRoutes);
+// use the customer account routes
+app.use('/customer-account', customerAccountRoutes);
+// use the transaction routes
+app.use('/transaction', transactionRoutes);
+// use the branch-manager routes
+app.use('/branch-manager', branchManagerRoutes);
 // use the employee management routes
 app.use('/employee-management', employeeRoutes);
 
