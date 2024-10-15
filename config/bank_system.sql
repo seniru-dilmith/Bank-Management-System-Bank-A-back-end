@@ -49,7 +49,6 @@ CREATE TABLE `customer` (
   `password` VARCHAR(255),
   `date_of_birth_or_origin` DATE,
   PRIMARY KEY (`id`),
-  UNIQUE KEY (`nic`), 
   UNIQUE KEY(`email`), 
   UNIQUE KEY (`username`)
 );
@@ -262,6 +261,29 @@ ADD FOREIGN KEY (`position_id`) REFERENCES `position`(`id`)
 ON DELETE CASCADE ON UPDATE CASCADE,
 ADD FOREIGN KEY (`action_id`) REFERENCES `action`(`id`) 
 ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- views
+
+-- View to get customer details
+CREATE VIEW customer_details AS
+SELECT `id`, `address`, `date_of_birth_or_origin`, `email`, `first_name`, `last_name`, `nic`, `phone`
+FROM `customer`;
+
+-- view to get employee details
+CREATE VIEW `employee_details` AS
+SELECT `id`,`address`, `email`, `first_name`, `last_name`, `phone`, `nic`, `position_id`
+FROM `employee`;
+
+-- indexes
+
+-- Index on loan status for faster retrieval of loans based on status
+CREATE INDEX idx_loan_status ON `loan`(`status`);
+
+-- Index on transaction timestamp for faster retrieval of transactions based on timestamp
+CREATE INDEX idx_transaction_timestamp ON `transaction`(`timestamp`);
+
+-- Index on loan installment due date for faster retrieval of installments based on due date
+CREATE INDEX idx_loan_installment_due_date ON `loan_installment`(`next_due_date`);
 
 -- triggers and stored procedures
 
