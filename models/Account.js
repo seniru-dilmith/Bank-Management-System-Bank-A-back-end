@@ -1,19 +1,11 @@
 const db = require('../config/db');
 
 class Account {
-    // Fetch account details for the specific customer by their ID
+    // Fetch account details for the specific customer by their ID using a stored procedure
     static async findByCustomerId(customerId) {
-        const query = `
-            SELECT 
-                a.account_number,
-                at.name AS account_type,
-                a.acc_balance
-            FROM account a
-            JOIN account_type at ON a.account_type_id = at.id
-            WHERE a.customer_id = ?
-        `;
+        const query = `CALL GetCustomerAccountSummary(?)`;
         const [accounts] = await db.query(query, [customerId]);
-        return accounts;
+        return accounts[0]; // Stored procedures in MySQL return an array of results
     }
 }
 
