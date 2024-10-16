@@ -31,69 +31,45 @@ exports.getRecentTransactionsByCustomerId = async (req, res) => {
 
 // Controller to get recent transactions (for employees only)
 exports.getAllRecentTransactions = async (req, res) => {
-    try {
-        // Use the Transaction model to fetch recent transactions
-        const transactions = await Transaction.getAllRecentTransactions();
+  try {
+      // Get the logged-in employee's ID from the request (assumed to be stored in req.user)
+      const employeeId = req.user.id;
 
-        if (transactions.length === 0) {
-            return res.status(404).json({ msg: 'No recent transactions found.' });
-        }
+      // Use the Transaction model to fetch recent transactions for the employee's branch
+      const transactions = await Transaction.getAllRecentTransactions(employeeId);
 
-        // Return the transactions as a JSON response
-        res.json(transactions);
-    } catch (error) {
-        console.error('Error fetching recent transactions:', error.message);
-        res.status(500).json({ msg: 'Server error while fetching recent transactions.' });
-    }
+      if (transactions.length === 0) {
+          return res.status(404).json({ msg: 'No recent transactions found for your branch.' });
+      }
+
+      // Return the transactions as a JSON response
+      res.json(transactions);
+  } catch (error) {
+      console.error('Error fetching recent transactions:', error.message);
+      res.status(500).json({ msg: 'Server error while fetching recent transactions.' });
+  }
 };
 
 // Controller function for performing a transaction
 exports.doTransaction = async (req, res) => {
-    const { fromAccount, beneficiaryAccount, beneficiaryName, amount, receiverReference, myReference } = req.body;
+  const { fromAccount, beneficiaryAccount, beneficiaryName, amount, receiverReference, myReference } = req.body;
 
-    let connection;
-    try {
-        // Get a manual connection for this transaction
-        connection = await db.getConnection();
-        await connection.beginTransaction(); // Start transaction
+  try {
+      // Use the Transaction model to call the stored procedure
+      await Transaction.performTransaction({
+          customerId: req.user.id,
+          fromAccount,
+          toAccount: beneficiaryAccount,
+          beneficiaryName,
+          amount,
+          receiverReference,
+          myReference
+      });
 
-        // Check if the "from" account has enough balance
-        const fromAccountResult = await Transaction.getAccountBalance(fromAccount);
-
-        if (!fromAccountResult) {
-            return res.status(404).json({ msg: 'From account not found' });
-        }
-
-        const fromAccountBalance = fromAccountResult.acc_balance;
-        if (fromAccountBalance < amount) {
-            return res.status(400).json({ msg: 'Insufficient balance' });
-        }
-
-        // Deduct the amount from the sender's account
-        await Transaction.updateAccountBalance(fromAccount, -amount);
-
-        // Add the amount to the beneficiary's account
-        await Transaction.updateAccountBalance(beneficiaryAccount, amount);
-
-        // Record the transaction in the transaction table
-        await Transaction.recordTransaction({
-            customerId: req.user.id,
-            fromAccount,
-            toAccount: beneficiaryAccount,
-            beneficiaryName,
-            amount,
-            receiverReference,
-            myReference
-        });
-
-        // Commit the transaction if everything is successful
-        await connection.commit();
-        res.json({ msg: 'Transaction successful' });
-    } catch (error) {
-        if (connection) await connection.rollback(); // Rollback in case of an error
-        console.error('Transaction failed:', error);
-        res.status(500).json({ msg: 'Transaction failed' });
-    } finally {
-        if (connection) connection.release(); // Release the connection back to the pool
-    }
+      // If successful, return a success message
+      res.json({ msg: 'Transaction successful' });
+  } catch (error) {
+      console.error('Transaction failed:', error);
+      res.status(500).json({ msg: 'Transaction failed', error: error.message });
+  }
 };
