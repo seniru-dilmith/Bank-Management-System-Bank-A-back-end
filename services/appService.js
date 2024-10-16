@@ -5,6 +5,7 @@ const loanRoutes = require('../routes/loanRoutes');
 const branchManagementRoutes = require('../routes/branchManagementRoutes');
 const customerAccountRoutes = require('../routes/customerAccountRoutes');
 const employeeRoutes = require('../routes/employeeRoutes');
+const employeeRoutesForTechnician = require('../routes/employeeRoutesForTechnician');
 const branchManagerRoutes = require('../routes/branchManagerRoutes');
 const loanApprovalRoutes = require('../routes/loanApprovalRoutes');
 const accountSummaryRoutes = require('../routes/accountSummaryRoutes'); 
@@ -37,7 +38,7 @@ app.use('/customer-account', customerAccountRoutes);
 app.use('/branch-manager', branchManagerRoutes);
 
 // use the employee management routes
-app.use('/employee-management', employeeRoutes);
+app.use('/employee-management', employeeRoutesForTechnician);
 
 // use the loan approval routes
 app.use('/loan-approval', loanApprovalRoutes);

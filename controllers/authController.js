@@ -18,15 +18,17 @@ exports.login = async (req, res) => {
         // Check for user in Employee and Customer tables
         const employee = await Employee.findByUsername(username);
         const customer = await Customer.findByUsername(username);
+        let position = null;
 
         let user = null;
         let userType = '';
 
         if (employee) {
             user = employee;
+            position = await Employee.findPositionEmployee(username);
             // Set userType based on the employee's position
-            if (employee.position_id === 6) userType = 'technician';
-            else if (employee.position_id === 1) userType = 'manager';
+            if (position.position === 'Technician') userType = 'technician';
+            else if (position.position === 'Branch Manager') userType = 'manager';
             else userType = 'employee';  // Default to employee
         } else if (customer) {
             user = customer;
@@ -42,10 +44,6 @@ exports.login = async (req, res) => {
         if (!isMatched) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
-
-        console.log('employee', employee);
-        console.log('customer', customer);
-        
 
         // Generate JWT token
         user.userType = userType;

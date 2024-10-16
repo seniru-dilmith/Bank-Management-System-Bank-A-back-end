@@ -12,7 +12,7 @@ exports.customerMiddleware = async (req, res, next) => {
             WHERE c.id = ?`, 
             [userId]);
 
-        if (results.length === 0 || req.user.userType !== 'customer') {
+        if (results.length === 0) {
             return res.status(403).json({ msg: 'Access denied: Only Customers are allowed' });
         }
 

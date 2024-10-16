@@ -11,7 +11,7 @@ exports.technicianMiddleware = async (req, res, next) => {
             WHERE e.id = ? AND p.name = 'Technician'`, 
             [userID]);
 
-        if (results.length === 0 || req.user.userType !== 'employee') {
+        if (results.length === 0) {
             return res.status(403).json({ msg: 'You are not authorized only technicians are allowed' });
         }
 

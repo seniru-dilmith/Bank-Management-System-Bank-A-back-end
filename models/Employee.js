@@ -4,31 +4,23 @@ class Employee {
     // Get all employees (both general and managers)
     static async getAll() {
         const query = `
-            SELECT e.id, e.first_name, e.last_name, e.address, e.phone, e.nic, e.email, e.username, p.name AS position, 
-                b2.name AS branch_name, p.id AS position_id
+            SELECT e.id, e.first_name, e.last_name, e.address, e.phone, e.nic, e.email, e.username, p.name AS position, COALESCE(b2.name, b1.name) AS branch_name, p.id AS position_id
             FROM employee e
-            JOIN position p ON e.position_id = p.id
-            JOIN manager_employee me ON e.id = me.manager_id
-            JOIN branch b2 ON me.branch_id = b2.id
-
-            UNION ALL
-
-            SELECT e.id, e.first_name, e.last_name, e.address, e.phone, e.nic, e.email, e.username, p.name AS position, 
-                b1.name AS branch_name, p.id AS position_id
-            FROM employee e
-            JOIN position p ON e.position_id = p.id
-            JOIN general_employee ge ON e.id = ge.employee_id
-            JOIN branch b1 ON ge.branch_id = b1.id
+            LEFT JOIN position p ON e.position_id = p.id
+            LEFT JOIN manager_employee me ON e.id = me.manager_id
+            LEFT JOIN branch b2 ON me.branch_id = b2.id
+            LEFT JOIN general_employee ge ON e.id = ge.employee_id
+            LEFT JOIN branch b1 ON ge.branch_id = b1.id
 
             ORDER BY 
                 CASE 
-                    WHEN branch_name = 'Head Office' THEN 0 
+                    WHEN COALESCE(b2.name, b1.name) = 'Head Office' THEN 0 
                     ELSE 1 
                 END, 
-                branch_name,
-                position_id, 
-                id;
-        `;
+            COALESCE(b2.name, b1.name), 
+            position_id, 
+            id;
+            `;
         const [employees] = await db.query(query);
         return employees;
     }
@@ -55,13 +47,13 @@ class Employee {
         await db.query(query, [employeeId, branch_id, supervisor_id]);
     }
 
-    static async update(id, { first_name, last_name, address, phone, nic, email, username, password, position_id }) {
+    static async update(id, { first_name, last_name, address, phone, nic, email, username, position_id }) {
         const query = `
             UPDATE employee 
-            SET first_name = ?, last_name = ?, address = ?, phone = ?, nic = ?, email = ?, username = ?, password = ?, position_id = ?
+            SET first_name = ?, last_name = ?, address = ?, phone = ?, nic = ?, email = ?, username = ?, position_id = ?
             WHERE id = ?
         `;
-        await db.query(query, [first_name, last_name, address, phone, nic, email, username, password, position_id, id]);
+        await db.query(query, [first_name, last_name, address, phone, nic, email, username, position_id, id]);
     }
 
     static async updateGeneralEmployee(employeeId, branch_id, supervisor_id) {
@@ -108,6 +100,18 @@ class Employee {
         const query = 'SELECT * FROM employee WHERE username = ?';
         const [results] = await db.query(query, [username]);
         return results[0];  // Return the first result if found
+    }
+
+    // Find employee by email
+    static async findPositionEmployee(username) {
+        const query = `
+            SELECT p.name AS position
+            FROM employee e
+            JOIN position p ON e.position_id = p.id
+            WHERE e.username = ?;
+        `;
+        const [result] = await db.query(query, [username]);
+        return result[0];  // Return the first matching employee
     }
 }
 
