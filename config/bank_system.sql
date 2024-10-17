@@ -377,6 +377,173 @@ END $$
 
 DELIMITER ;
 
+-- Procedure: sp_get_recent_transactions_by_branch
+DELIMITER $$
+CREATE PROCEDURE sp_get_recent_transactions_by_branch(IN emp_id INT)
+BEGIN
+    -- Fetch the branch_id for the logged-in employee
+    DECLARE branchId INT;
+    
+    SELECT branch_id INTO branchId 
+    FROM general_employee 
+    WHERE employee_id = emp_id;
+
+    -- Fetch recent transactions for the employee's branch
+    SELECT t.timestamp, tt.name, tt.description, t.amount
+    FROM transaction t
+    JOIN account a ON t.from_account_number = a.account_number  
+    JOIN customer c ON a.customer_id = c.id 
+    JOIN branch b ON a.branch_id = b.id  
+    JOIN transaction_type tt ON t.transaction_type_id = tt.id
+    WHERE b.id = branchId  -- Filter transactions by employee's branch
+    ORDER BY t.timestamp DESC
+    LIMIT 20;
+END;
+DELIMETER ;
+
+-- Procedure: GetCustomerAccountSummary
+DELIMITER $$
+
+CREATE PROCEDURE GetCustomerAccountSummary(IN custId INT)
+BEGIN
+    SELECT 
+        a.account_number,
+        at.name AS account_type,
+        a.acc_balance
+    FROM account a
+    JOIN account_type at ON a.account_type_id = at.id
+    WHERE a.customer_id = custId;
+END $$
+
+DELIMITER ;
+
+-- Procedure: DoTransaction
+DELIMITER $$
+
+CREATE PROCEDURE DoTransaction(
+    IN p_customerId INT,
+    IN p_fromAccount VARCHAR(20),
+    IN p_toAccount VARCHAR(20),
+    IN p_beneficiaryName VARCHAR(255),
+    IN p_amount DECIMAL(10,2),
+    IN p_receiverReference VARCHAR(255),
+    IN p_myReference VARCHAR(255)
+)
+BEGIN
+    DECLARE v_fromAccountBalance DECIMAL(10,2);
+
+    -- Start transaction
+    START TRANSACTION;
+
+    -- Check if the "from" account has enough balance
+    SELECT acc_balance INTO v_fromAccountBalance
+    FROM account
+    WHERE account_number = p_fromAccount
+    FOR UPDATE;  -- Lock the row to prevent changes during the transaction
+
+    IF v_fromAccountBalance IS NULL THEN
+        -- Rollback transaction if the "from" account doesn't exist
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'From account not found';
+    ELSEIF v_fromAccountBalance < p_amount THEN
+        -- Rollback transaction if there are insufficient funds
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Insufficient balance';
+    ELSE
+        -- Deduct the amount from the sender's account
+        UPDATE account
+        SET acc_balance = acc_balance - p_amount
+        WHERE account_number = p_fromAccount;
+
+        -- Add the amount to the beneficiary's account
+        UPDATE account
+        SET acc_balance = acc_balance + p_amount
+        WHERE account_number = p_toAccount;
+
+        -- Record the transaction
+        INSERT INTO transaction 
+            (customer_id, from_account_number, to_account_number, beneficiary_name, amount, receiver_reference, my_reference, transaction_type_id)
+        VALUES 
+            (p_customerId, p_fromAccount, p_toAccount, p_beneficiaryName, p_amount, p_receiverReference, p_myReference, 3);
+
+        -- Commit the transaction
+        COMMIT;
+    END IF;
+END $$
+
+DELIMITER ;
+
+-- Procedure: RequestLoan
+DELIMITER $$
+
+CREATE PROCEDURE RequestLoan(
+    IN p_customerId INT,
+    IN p_loanTypeId INT,
+    IN p_loanAmount DECIMAL(10, 2),
+    IN p_loanDuration INT
+)
+BEGIN
+    -- Insert the loan request with a default status of 'pending'
+    INSERT INTO loan (customer_id, type_id, loan_amount, loan_term, status)
+    VALUES (p_customerId, p_loanTypeId, p_loanAmount, p_loanDuration, 'pending');
+END $$
+
+DELIMITER ;
+
+-- Procedure: GetLoanDetails
+DELIMITER $$
+
+CREATE PROCEDURE GetLoanDetails(
+    IN p_customerId INT,
+    IN p_loanId INT
+)
+BEGIN
+    SELECT l.id AS loanId, 
+           lt.type_name AS loanType, 
+           l.status AS loanStatus, 
+           l.start_date AS applicationDate
+    FROM loan l
+    JOIN loan_type lt ON l.type_id = lt.id
+    WHERE l.customer_id = p_customerId 
+      AND l.id = p_loanId;
+END $$
+
+DELIMITER ;
+
+-- Procedure: GetPendingLoans
+DELIMITER $$
+
+CREATE PROCEDURE GetPendingLoans()
+BEGIN
+    SELECT loan.id AS loanId, 
+           loan_type.type_name AS loanType, 
+           loan.loan_amount, 
+           loan.loan_term, 
+           CONCAT(customer.first_name, ' ', customer.last_name) AS customerName, 
+           loan.status
+    FROM loan
+    JOIN loan_type ON loan.type_id = loan_type.id
+    JOIN customer ON loan.customer_id = customer.id
+    WHERE loan.status = 'pending';
+END $$
+
+DELIMITER ;
+
+-- Procedure: UpdateLoanStatus
+
+DELIMITER $$
+
+CREATE PROCEDURE UpdateLoanStatus(IN p_loanId INT, IN p_newStatus VARCHAR(50))
+BEGIN
+    UPDATE loan
+    SET status = p_newStatus
+    WHERE id = p_loanId AND status = 'pending';
+END $$
+
+DELIMITER ;
+
 -- Trigger for Online Loan Based on FD
 DELIMITER $$
 
@@ -600,4 +767,3 @@ VALUES
 (4, 4), -- Security Officer can Perform Physical Security Check
 
 (6, 6); -- Technician can Provide Technical Support
-

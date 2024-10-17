@@ -8,22 +8,39 @@ class Branch {
     }
 
     static async create({ name, branch_address, contact_number }) {
-        const query = 'INSERT INTO branch (name, branch_address, contact_number) VALUES (?, ?, ?)';
-        await db.query(query, [name, branch_address, contact_number]);
+        const checkQuery = `
+            SELECT * FROM branch 
+            WHERE name = ? OR branch_address = ? OR contact_number = ?
+        `;
+        const [existingBranch] = await db.query(checkQuery, [name, branch_address, contact_number]);
+
+        if (existingBranch.length > 0) {
+            throw new Error('Branch with the same name, address, or contact number already exists');
+        }
+
+        const insertQuery = `
+            INSERT INTO branch (name, branch_address, contact_number) 
+            VALUES (?, ?, ?)
+        `;
+        await db.query(insertQuery, [name, branch_address, contact_number]);
     }
 
     static async update({ currentName, newName, branch_address, contact_number }) {
-        // Check if the branch already exists
-        const cheeckQuery = 'SELECT * FROM branch WHERE name = ?';
-        const [branch] = await db.query(cheeckQuery, [currentName]);
-
-        // If the branch does not exist, throw an error
-        if (branch.length === 0) throw new Error(`Branch with name: ${currentName} does not exist`);
-
-        // Update the branch details
-        const updateQuery = 'UPDATE branch SET name = ?, branch_address = ?, contact_number = ? WHERE name = ?';
+      
+        const checkQuery = 'SELECT * FROM branch WHERE name = ?';
+        const [branch] = await db.query(checkQuery, [currentName]);
+      
+        if (branch.length === 0) {
+          throw new Error(`Branch with name: ${currentName} does not exist`);
+        }
+      
+        const updateQuery = `
+          UPDATE branch 
+          SET name = ?, branch_address = ?, contact_number = ? 
+          WHERE name = ?
+        `;
         await db.query(updateQuery, [newName, branch_address, contact_number, currentName]);
-    }
+    }      
 
     static async findById(id) {
         const query = 'SELECT * FROM branch WHERE id = ?';
