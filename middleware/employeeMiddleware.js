@@ -13,7 +13,7 @@ exports.employeeMiddleware = async (req, res, next) => {
             WHERE e.id = ? AND p.name NOT IN ('Branch Manager', 'Technician')`, 
             [userId]);
 
-        if (results.length === 0 || req.user.userType !== 'employee') {
+        if (results.length === 0) {
             return res.status(403).json({ msg: 'Access denied: Only Employees are allowed' });
         }
 

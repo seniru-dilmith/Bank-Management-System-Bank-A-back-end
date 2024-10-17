@@ -15,8 +15,6 @@ exports.getEmployees = async (req, res) => {
   }
 };
 
-
-
 // Get general employees by branch ID
 exports.getGeneralEmployeesByBranchId = async (req, res) => {
   const { branchId } = req.params; // branchId is a route parameter
@@ -92,7 +90,7 @@ exports.deleteEmployee = async (req, res) => {
 };
 
 // Controller function to get all employees
-exports.getEmployees = async (req, res) => {
+exports.getEmployeesForTechnician = async (req, res) => {
     try {
         const employees = await Employee.getAll();
         res.json(employees);
@@ -103,7 +101,7 @@ exports.getEmployees = async (req, res) => {
 };
 
 // Controller function to add new employees
-exports.addEmployee = async (req, res) => {
+exports.addEmployeeForTechnician = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
@@ -131,18 +129,17 @@ exports.addEmployee = async (req, res) => {
 };
 
 // Controller function to update a selected employee
-exports.updateEmployee = async (req, res) => {
+exports.updateEmployeeForTechnician = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { id, first_name, last_name, address, phone, nic, email, username, password, position_id, branch_id } = req.body;
+    const { id, first_name, last_name, address, phone, nic, email, username, position_id, branch_id } = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
     try {
-        await Employee.update(id, { first_name, last_name, address, phone, nic, email, username, password:hashedPassword, position_id });
-
+        await Employee.update(id, { first_name, last_name, address, phone, nic, email, username, position_id });
+        
         if (position_id === 1) {
             // Update manager branch in manager_employee table
             await Employee.updateManagerBranch(id, branch_id);
@@ -159,7 +156,7 @@ exports.updateEmployee = async (req, res) => {
 };
 
 // Controller function to delete an employee
-exports.removeEmployee = async (req, res) => {
+exports.removeEmployeeForTechnician = async (req, res) => {
     const { id } = req.params;
 
     if (parseInt(id) === req.user.id) {

@@ -8,45 +8,48 @@ const Customer = require('../models/Customer');
 exports.login = async (req, res) => {
     const { username, password } = req.body;
 
-    // Validating input
+    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
 
     try {
-        // Query the database for the employees and customers using models
+        // Check for user in Employee and Customer tables
         const employee = await Employee.findByUsername(username);
         const customer = await Customer.findByUsername(username);
+        let position = null;
 
         let user = null;
         let userType = '';
 
-        // Check if the user is an employee or a customer
         if (employee) {
             user = employee;
-            userType = 'employee';
+            position = await Employee.findPositionEmployee(username);
+            // Set userType based on the employee's position
+            if (position.position === 'Technician') userType = 'technician';
+            else if (position.position === 'Branch Manager') userType = 'manager';
+            else userType = 'employee';  // Default to employee
         } else if (customer) {
             user = customer;
             userType = 'customer';
         }
 
-        if (!user) {  // If the user is not found
+        if (!user) {
             return res.status(400).json({ msg: 'User not found' });
         }
 
-        // Check if the password is correct
+        // Verify password
         const isMatched = await bcrypt.compare(password, user.password);
-        if (!isMatched) {  // If the password is incorrect
+        if (!isMatched) {
             return res.status(400).json({ msg: 'Invalid credentials' });
         }
 
+        // Generate JWT token
         user.userType = userType;
-
-        // Generate a JWT token for the user
         const token = generateToken(user);
-        res.json({ token, userType });
 
+        res.json({ token, userType });
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ msg: 'Server error during login' });
