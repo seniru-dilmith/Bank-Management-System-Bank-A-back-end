@@ -1,10 +1,7 @@
-// models/transactionModel.js
 const db = require('../config/db');
 
-
-
 // Get all transactions
-const getRcentTransactionsByBranchId = async (branchId) => {
+exports.getRcentTransactionsByBranchId = async (branchId) => {
   const query = `SELECT 
   tr.timestamp as Date,
   tt.name as TransactionType,
@@ -23,7 +20,7 @@ const getRcentTransactionsByBranchId = async (branchId) => {
 };
 
 // Get all transactions
-const getRcentTransactionsByCustomerId = async (customerId) => {
+exports.getRcentTransactionsByCustomerId = async (customerId) => {
   const query = `SELECT 
   tr.timestamp as Date,
   tt.name as TransactionType,
@@ -37,9 +34,21 @@ const getRcentTransactionsByCustomerId = async (customerId) => {
   return transactions;
 };
 
+// Fetch recent transactions by customer ID and account number
+exports.getRecentTransactionsByCustomerIdAndAccountNumber = async (customerId, accountNumber) => {
+  const query = `
+    SELECT 
+      t.timestamp AS Date,
+      tt.name AS TransactionType,
+      t.my_reference AS Description,
+      t.amount AS Amount
+    FROM transaction t
+    JOIN transaction_type tt ON t.transaction_type_id = tt.id
+    WHERE t.customer_id = ? AND (t.from_account_number = ? OR t.to_account_number = ?)
+    ORDER BY t.timestamp DESC
+    LIMIT 10;
+  `;
 
-module.exports = {
- 
-  getRcentTransactionsByBranchId,
-  getRcentTransactionsByCustomerId,
+  const [rows] = await db.query(query, [customerId, accountNumber, accountNumber]);
+  return rows;
 };
