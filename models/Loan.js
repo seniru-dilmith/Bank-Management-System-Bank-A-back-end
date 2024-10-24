@@ -28,6 +28,16 @@ class Loan {
         const [loanDetails] = await db.query(query, [customerId, loanId]);
         return loanDetails[0][0];  // Accessing the result set from the stored procedure
     }
+
+    // Method for an employee to submit a loan request
+    static async requestLoanByEmployee({ customerId, loanAmount, loanTerm, interestRate, branchId }) {
+        const query = `
+            INSERT INTO loan (customer_id, loan_amount, loan_term, interest_rate, status, branch_id, start_date)
+            VALUES (?, ?, ?, ?, 'pending', ?, NULL)
+        `;
+        const [result] = await db.query(query, [customerId, loanAmount, loanTerm, interestRate, branchId]);
+        return result;
+    }
     
 }
 
