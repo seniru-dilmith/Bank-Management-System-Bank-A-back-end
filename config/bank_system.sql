@@ -593,6 +593,72 @@ END $$
 
 DELIMITER ;
 
+-- Procedure: RequestLoan
+DELIMITER $$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `RequestLoan`(
+    IN p_customerId INT,
+    IN p_loanTypeId INT,
+    IN p_loanAmount DECIMAL(10, 2),
+    IN p_loanDuration INT
+)
+BEGIN
+    DECLARE v_fdAmount DECIMAL(15,2);
+    DECLARE v_fdAccountNumber INT;
+    DECLARE v_maxLoanAmount DECIMAL(15,2);
+    DECLARE v_savingsAccountNumber INT;
+    DECLARE v_status ENUM('approved', 'rejected');
+
+    -- Check if the customer has an FD account and retrieve the FD amount
+    SELECT amount, account_number 
+    INTO v_fdAmount, v_fdAccountNumber
+    FROM fixed_deposit 
+    WHERE customer_id = p_customerId
+    LIMIT 1;
+
+    -- Check if the customer has a Savings account bound to the FD
+    SELECT account_number 
+    INTO v_savingsAccountNumber
+    FROM account 
+    WHERE customer_id = p_customerId 
+    AND account_type_id IN (SELECT id FROM account_type WHERE name LIKE 'Savings%')
+    LIMIT 1;
+
+    IF v_fdAmount IS NULL THEN
+        -- Customer does not have an FD, loan is rejected
+        SET v_status = 'rejected';
+    ELSE
+        -- Calculate maximum loan amount (60% of FD amount, upper limit of 500,000)
+        SET v_maxLoanAmount = LEAST(v_fdAmount * 0.60, 500000);
+
+        IF p_loanAmount <= v_maxLoanAmount THEN
+            -- Approve the loan and deposit the amount to the savings account
+            SET v_status = 'approved';
+
+            -- Insert the loan record with approved status
+            INSERT INTO loan (customer_id, type_id, fixed_deposit_id, branch_id, status, loan_amount, loan_term, interest_rate, start_date)
+            VALUES (p_customerId, p_loanTypeId, v_fdAccountNumber, (SELECT branch_id FROM account WHERE account_number = v_savingsAccountNumber), 
+                    v_status, p_loanAmount, p_loanDuration, 5.00, CURDATE());
+
+            -- Deposit loan amount into the savings account
+            UPDATE account
+            SET acc_balance = acc_balance + p_loanAmount
+            WHERE account_number = v_savingsAccountNumber;
+
+        ELSE
+            -- Loan amount exceeds 60% of FD or upper limit, reject the loan
+            SET v_status = 'rejected';
+
+            -- Insert the loan record with rejected status
+            INSERT INTO loan (customer_id, type_id, fixed_deposit_id, branch_id, status, loan_amount, loan_term, interest_rate, start_date)
+            VALUES (p_customerId, p_loanTypeId, v_fdAccountNumber, (SELECT branch_id FROM account WHERE account_number = v_savingsAccountNumber), 
+                    v_status, p_loanAmount, p_loanDuration, 5.00, CURDATE());
+        END IF;
+    END IF;
+END
+
+DELIMITER ;
+
 -- Sample Data Insertions
 
 -- Insert account types (Savings and Fixed Deposit)
