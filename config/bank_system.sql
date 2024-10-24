@@ -1,4 +1,4 @@
-DROP DATABASE IF EXISTS `bank_system`;
+DROP DATABASE `bank_system`;
 CREATE DATABASE `bank_system`;
 USE `bank_system`;
 
@@ -360,26 +360,111 @@ END $$
 
 DELIMITER ;
 
--- stored procedure to get branch wise late installments (reports)
+-- stored procedure to get branch transactions within a specified time period
 DELIMITER $$
 
-CREATE PROCEDURE `branch_wise_late_installments`(IN branchId INT)
+CREATE PROCEDURE get_branch_transactions(
+    IN emp_id INT,
+    IN start_date DATE,
+    IN end_date DATE
+)
 BEGIN
-  SELECT l.id AS loan_id, c.first_name, c.last_name, li.next_due_date, li.installment_amount, li.paid
-  FROM loan l
-  JOIN loan_installment li ON l.id = li.loan_id
-  JOIN customer c ON l.customer_id = c.id
-  JOIN account a ON a.customer_id = c.id
-  WHERE a.branch_id = branchId
-    AND li.next_due_date < CURDATE()
-    AND li.paid = 0;
+    DECLARE branchId INT;
+
+    -- Fetch the branch ID for the logged-in employee
+    SELECT branch_id INTO branchId 
+    FROM manager_employee 
+    WHERE manager_id = emp_id;
+
+    -- Debugging: Display the branchId
+    SELECT branchId AS fetched_branch_id;
+
+    -- Ensure the branch ID exists
+    IF branchId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Branch not found for the provided employee.';
+    END IF;
+
+    -- Fetch transactions within the specified time period
+    SELECT 
+        t.id AS transaction_id,
+        t.timestamp AS transaction_time,
+        t.from_account_number,
+        t.to_account_number,
+        t.amount,
+        tt.name AS transaction_type,
+        t.beneficiary_name,
+        t.receiver_reference,
+        t.my_reference
+    FROM 
+        transaction t
+    JOIN 
+        account a ON t.from_account_number = a.account_number 
+                   OR t.to_account_number = a.account_number
+    JOIN 
+        transaction_type tt ON t.transaction_type_id = tt.id
+    WHERE 
+        a.branch_id = branchId
+        AND t.timestamp BETWEEN start_date AND end_date
+    ORDER BY 
+        t.timestamp DESC;
 END $$
 
 DELIMITER ;
 
--- Procedure: sp_get_recent_transactions_by_branch
+-- stored procedure to get branch wise late installments (reports)
 DELIMITER $$
-CREATE PROCEDURE sp_get_recent_transactions_by_branch(IN emp_id INT)
+
+CREATE PROCEDURE branch_wise_late_installments(
+    IN emp_id INT
+)
+BEGIN
+    DECLARE branchId INT;
+
+    -- Fetch the branch ID for the logged-in employee
+    SELECT branch_id INTO branchId 
+    FROM manager_employee 
+    WHERE manager_id = emp_id;
+
+    -- Debugging: Display the branchId
+    SELECT branchId AS fetched_branch_id;
+
+    -- Ensure the branch ID exists
+    IF branchId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Branch not found for the provided employee.';
+    END IF;
+
+    -- Fetch late installments for the branch
+    SELECT 
+        l.id AS loan_id, 
+        c.first_name, 
+        c.last_name, 
+        li.next_due_date, 
+        li.installment_amount, 
+        li.paid 
+    FROM 
+        loan_installment li
+    JOIN 
+        loan l ON li.loan_id = l.id
+    JOIN 
+        customer c ON l.customer_id = c.id
+    JOIN 
+        account a ON a.customer_id = c.id
+    WHERE 
+        a.branch_id = branchId
+        AND li.next_due_date < CURDATE()
+        AND li.paid = 0
+    ORDER BY 
+        li.next_due_date ASC;
+END $$
+
+DELIMITER ;
+
+
+-- Procedure: get_recent_transactions_by_branch
+DELIMITER $$
+CREATE PROCEDURE get_recent_transactions_by_branch(IN emp_id INT)
 BEGIN
     -- Fetch the branch_id for the logged-in employee
     DECLARE branchId INT;
@@ -833,3 +918,26 @@ VALUES
 (4, 4), -- Security Officer can Perform Physical Security Check
 
 (6, 6); -- Technician can Provide Technical Support
+
+-- Set specific loan installments as late by updating their next_due_date to past dates
+-- Ensure that the 'paid' column is 0 to mark them as unpaid
+
+UPDATE loan_installment 
+SET next_due_date = '2024-09-10', paid = 0
+WHERE id = 1;
+
+UPDATE loan_installment 
+SET next_due_date = '2024-09-15', paid = 0
+WHERE id = 2;
+
+UPDATE loan_installment 
+SET next_due_date = '2024-08-30', paid = 0
+WHERE id = 3;
+
+UPDATE loan_installment 
+SET next_due_date = '2024-09-25', paid = 0
+WHERE id = 4;
+
+UPDATE loan_installment 
+SET next_due_date = '2024-10-01', paid = 0
+WHERE id = 5;
