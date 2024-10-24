@@ -2,16 +2,25 @@ const db = require('../config/db');
 
 
 // Get a branch by ID
-const getBranchById = async (id) => {
+exports.getBranchById = async (id) => {
     const query = 'SELECT * FROM branch WHERE id = ?';
     const [result] = await db.query(query, [id]);
     return result[0];
 };
 
-
+// Get the branch ID for a specific branch manager
+exports.getBranchIdByManager = async (managerId) => {
+    const query = `
+      SELECT branch_id 
+      FROM manager_employee 
+      WHERE manager_id = ?
+    `;
+    const [result] = await db.query(query, [managerId]);
+    return result.length > 0 ? result[0].branch_id : null; // Return the branch ID or null if not found
+};
 
 // Update a branch by ID
-const updateBranch = async (id, branchData) => {
+exports.updateBranch = async (id, branchData) => {
     const query = `
       UPDATE branch
       SET name = ?, branch_address = ?, contact_number = ?
@@ -22,8 +31,9 @@ const updateBranch = async (id, branchData) => {
     return result;
 };
 
-
-module.exports = {
-    getBranchById,
-    updateBranch
-};
+// get positions list
+exports.getPositions = async () => {
+    const query = 'SELECT id, name AS title FROM position WHERE name != "Branch Manager"';
+    const [result] = await db.query(query);
+    return result;
+}
