@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const Branch = require('./Branch');
 
 
 // Get a branch by ID
@@ -37,3 +38,15 @@ exports.getPositions = async () => {
     const [result] = await db.query(query);
     return result;
 }
+
+// update branch details
+exports.updateBranchDetails = async (branchId, branchData) => {
+    const query = `
+      UPDATE branch
+      SET name = ?, branch_address = ?, contact_number = ?
+      WHERE id = ?
+    `;
+    const { name, branch_address, contact_number } = branchData;
+    const [result] = await db.query(query, [name, branch_address, contact_number, branchId]);
+    return result;
+};
