@@ -1,5 +1,5 @@
 const express = require('express');
-const { getAllRecentTransactions, doTransaction, getRecentTransactionsByBranchId, getRecentTransactionsByCustomerId } = require('../controllers/transactionController');
+const { getAllRecentTransactions, doTransaction, getRecentTransactionsByBranchId, getRecentTransactionsByCustomerId, getRecentTransactionsByCustomerIdAndAccountNumber } = require('../controllers/transactionController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { transactionValidation } = require('../validations/transactionValidation');
 const { employeeMiddleware } = require('../middleware/employeeMiddleware');
@@ -15,5 +15,7 @@ router.post('/do-transaction', authMiddleware, customerMiddleware, transactionVa
 router.get('/recent-by-branch/:branchId', authMiddleware, branchManagerMiddleware, getRecentTransactionsByBranchId);
 // Route to get recent transactions by customer
 router.get('/recent-by-customer/:customerId', authMiddleware, customerMiddleware, getRecentTransactionsByCustomerId);
+// Route to get recent transactions by customer and account using query parameters
+router.get('/recent-by-customer', authMiddleware, customerMiddleware, getRecentTransactionsByCustomerIdAndAccountNumber);
 
 module.exports = router;
