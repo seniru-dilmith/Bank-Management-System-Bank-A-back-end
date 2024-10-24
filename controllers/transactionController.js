@@ -50,6 +50,28 @@ exports.getAllRecentTransactions = async (req, res) => {
   }
 };
 
+// Get recent transactions by customer and account number
+exports.getRecentTransactionsByCustomerIdAndAccountNumber = async (req, res) => {
+  const { customerId, accountNumber } = req.query; // Extract query parameters
+
+  try {
+    if (!customerId || !accountNumber) {
+      return res.status(400).json({ message: 'Customer ID and account number are required.' });
+    }
+
+    const transactions = await transactionModel.getRecentTransactionsByCustomerIdAndAccountNumber(customerId, accountNumber);
+
+    if (!transactions || transactions.length === 0) {
+      return res.status(404).json({ message: 'No transactions found for this customer and account.' });
+    }
+
+    res.status(200).json(transactions);
+  } catch (err) {
+    console.error('Error fetching transactions:', err);
+    res.status(500).json({ message: 'Error fetching transactions', error: err.message });
+  }
+};
+
 // Controller function for performing a transaction
 exports.doTransaction = async (req, res) => {
   const { fromAccount, beneficiaryAccount, beneficiaryName, amount, receiverReference, myReference } = req.body;
