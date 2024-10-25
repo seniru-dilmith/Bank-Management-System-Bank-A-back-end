@@ -56,11 +56,18 @@ const deleteEmployee = async (id) => {
   return result;
 };
 
+const branchIdOfEmployee = async (employeeId) => {
+    const query = `SELECT branch_id FROM general_employee WHERE employee_id = ?`;
+    const [result] = await db.query(query, [employeeId]);
+    return result[0].branch_id;
+}
+
 module.exports = {
   getAllEmployees,
   getEmployeeById,
   getGeneralEmployeesByBranchId,
   getManagerEmployeesByBranchId,
   updateEmployee,
-  deleteEmployee
+  deleteEmployee,
+  branchIdOfEmployee
 };

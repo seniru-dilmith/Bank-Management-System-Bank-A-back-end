@@ -22,7 +22,17 @@ WHERE ac.branch_id = ?;`;
   return customerAccounts;
 };
 
+const getAccountSummaries = async (emp_id) => {
+
+  const query = `CALL GetBranchAccountSummaries(?)`;
+
+  const [accountSummaries] = await db.query(query,[emp_id]); 
+
+  return accountSummaries;
+};
+
 
 module.exports = {
   getCustomerAccountsByBranch,
+  getAccountSummaries
 };
