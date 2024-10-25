@@ -191,3 +191,12 @@ exports.removeEmployeeForTechnician = async (req, res) => {
         res.status(500).json({ msg: 'Server error while deleting employee' });
     }
 };
+
+exports.getPositionsOfEmployees = async (req, res) => {
+  try {
+    const positions = await employeeModel.getPositions();
+    res.status(200).json(positions);
+  } catch (err) {
+    res.status(500).send({ message: 'Error fetching positions', error: err.message });
+  }
+};
