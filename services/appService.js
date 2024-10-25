@@ -46,4 +46,5 @@ app.use('/loan-approval', loanApprovalRoutes);
 // Use the account summary routes
 app.use('/accounts', accountSummaryRoutes); 
 
+
 module.exports = app;

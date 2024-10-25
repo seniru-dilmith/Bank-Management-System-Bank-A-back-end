@@ -3,7 +3,7 @@ const router = express.Router();
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { technicianMiddleware } = require('../middleware/technicianMiddleware');
 const { addEmployeeValidation, updateEmployeeValidation } = require('../validations/employeeValidation');
-const { getEmployeesForTechnician, addEmployeeForTechnician, updateEmployeeForTechnician, removeEmployeeForTechnician } = require('../controllers/employeeController');
+const { getEmployeesForTechnician, addEmployeeForTechnician, updateEmployeeForTechnician, removeEmployeeForTechnician, getPositionsOfEmployees } = require('../controllers/employeeController');
 
 router.get('/employees', authMiddleware, technicianMiddleware, getEmployeesForTechnician);
 
@@ -15,5 +15,7 @@ router.put('/update-employee', authMiddleware, technicianMiddleware, updateEmplo
 
 // Route to remove an employee
 router.delete('/remove-employee/:id', authMiddleware, technicianMiddleware, removeEmployeeForTechnician);
+
+router.get('/positions', authMiddleware, technicianMiddleware, getPositionsOfEmployees);
 
 module.exports = router;
