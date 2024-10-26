@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/authMiddleware');
-const { getCustomerLoans, requestLoan, getLoanDetails, requestLoanByEmployee } = require('../controllers/loanController');
+const { getCustomerLoans, requestLoan, getLoanDetails, requestLoanByEmployee, getLoanTypes } = require('../controllers/loanController');
 const { requestLoanValidation } = require('../validations/loanValidation'); 
 const { customerMiddleware } = require('../middleware/customerMiddleware'); 
 const { employeeMiddleware } = require('../middleware/employeeMiddleware');
@@ -18,5 +18,7 @@ router.get('/loan-details/:id', authMiddleware, customerMiddleware, getLoanDetai
 // Route to submit a loan application by an employee
 router.post('/request-loan-emp', authMiddleware, employeeMiddleware, requestLoanByEmployee);
 
+//loan types
+router.get('/types', getLoanTypes);
 
 module.exports = router;

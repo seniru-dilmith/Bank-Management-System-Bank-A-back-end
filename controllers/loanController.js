@@ -77,27 +77,33 @@ exports.getLoanDetails = async (req, res) => {
 
 // Controller for employee to submit a loan request for a customer
 exports.requestLoanByEmployee = async (req, res) => {
-    const { customerAccountNumber, loanAmount, loanTerm, interestRate } = req.body;
-
+    const { customerAccountNumber, loanAmount, loanTerm, interestRate, typeId } = req.body;
     try {
-        // Find the account by account number
-        const account = await Account.findOne({ where: { account_number: customerAccountNumber } });
-        if (!account) {
-            return res.status(404).json({ message: 'Customer account not found' });
-        }
-
-        // Submit the loan request with status 'pending'
-        const loan = await Loan.requestLoanByEmployee({
-            customerId: account.customer_id,
-            loanAmount,
-            loanTerm,
-            interestRate,
-            branchId: account.branch_id // Assuming the branch is the same as the account's branch
-        });
-
-        res.status(201).json({ message: 'Loan application submitted successfully', loan });
+      const account = await Account.findOne({ where: { account_number: customerAccountNumber } });
+      if (!account) return res.status(404).json({ message: 'Customer account not found' });
+  
+      const loan = await Loan.requestLoanByEmployee({
+        customerId: account.customer_id,
+        loanAmount,
+        loanTerm,
+        interestRate,
+        branchId: account.branch_id,
+        typeId,
+      });
+  
+      res.status(201).json({ message: 'Loan application submitted successfully', loan });
     } catch (error) {
-        console.error('Error submitting loan request by employee:', error);
+      console.error('Error submitting loan request:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.getLoanTypes = async (req, res) => {
+    try {
+        const types = await Loan.types();
+        res.json(types);
+    } catch (error) {
+        console.error('Error getting loan types:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

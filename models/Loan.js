@@ -30,15 +30,20 @@ class Loan {
     }
 
     // Method for an employee to submit a loan request
-    static async requestLoanByEmployee({ customerId, loanAmount, loanTerm, interestRate, branchId }) {
+    static async requestLoanByEmployee({ customerId, loanAmount, loanTerm, interestRate, branchId, typeId }) {
         const query = `
-            INSERT INTO loan (customer_id, loan_amount, loan_term, interest_rate, status, branch_id, start_date)
-            VALUES (?, ?, ?, ?, 'pending', ?, NULL)
+            INSERT INTO loan (customer_id, loan_amount, loan_term, interest_rate, status, branch_id, type_id)
+            VALUES (?, ?, ?, ?, 'pending', ?, ?)
         `;
-        const [result] = await db.query(query, [customerId, loanAmount, loanTerm, interestRate, branchId]);
+        const [result] = await db.query(query, [customerId, loanAmount, loanTerm, interestRate, branchId, typeId]);
         return result;
     }
     
+    static async types() {
+        const query = `SELECT * FROM loan_type`;
+        const [types] = await db.query(query);
+        return types;
+    }
 }
 
 module.exports = Loan;

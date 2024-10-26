@@ -666,7 +666,9 @@ DELIMITER $$
 CREATE PROCEDURE UpdateLoanStatus(IN p_loanId INT, IN p_newStatus VARCHAR(50))
 BEGIN
     UPDATE loan
-    SET status = p_newStatus
+    SET 
+      status = p_newStatus,
+      start_date = CURDATE()
     WHERE id = p_loanId AND status = 'pending';
 END $$
 
