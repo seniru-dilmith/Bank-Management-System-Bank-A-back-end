@@ -1,12 +1,11 @@
 const db = require('../config/db');
 
 class Transaction {
-    // Method to fetch recent transactions (for employees only)
+    // Fetch all recent transactions using the stored procedure
     static async getAllRecentTransactions(employeeId) {
-        const query = `CALL sp_get_recent_transactions_by_branch(?);`;
+        const query = 'CALL get_recent_transactions_for_branch(?);';
         const [transactions] = await db.query(query, [employeeId]);
-
-        return transactions[0];  // Return only the actual transaction data
+        return transactions[0]; // Return the actual transaction data
     }
 
     // Method to check account balance for the "from" account (can be removed as it's now handled in the stored procedure)

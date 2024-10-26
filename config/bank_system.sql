@@ -486,6 +486,49 @@ BEGIN
 END;
 DELIMETER ;
 
+
+-- Procedure: get_recent_transactions_for_branch employees
+DELIMITER $$
+
+CREATE PROCEDURE `get_recent_transactions_for_branch`(IN empId INT)
+BEGIN
+    DECLARE branchId INT;
+
+    -- Fetch the branch ID for the given employee
+    SELECT branch_id INTO branchId 
+    FROM general_employee 
+    WHERE employee_id = empId;
+
+    -- Ensure branchId is valid
+    IF branchId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid employee ID or branch not found.';
+    END IF;
+
+    -- Fetch recent transactions for the branch
+    SELECT 
+        t.id AS transaction_id, 
+        t.timestamp, 
+        CONCAT(c.first_name, ' ', c.last_name) AS account_holder_name, 
+        tt.name AS transaction_type, 
+        t.amount
+    FROM 
+        transaction t
+    JOIN 
+        account a ON t.from_account_number = a.account_number 
+    JOIN 
+        customer c ON a.customer_id = c.id
+    JOIN 
+        transaction_type tt ON t.transaction_type_id = tt.id
+    WHERE 
+        a.branch_id = branchId
+    ORDER BY 
+        t.timestamp DESC
+    LIMIT 10;
+END $$
+
+DELIMITER ;
+
 -- Procedure: GetCustomerAccountSummary
 DELIMITER $$
 
@@ -674,6 +717,43 @@ BEGIN
     END IF;
 
   END IF;
+END $$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE GetBranchAccountSummaries(IN empId INT)
+BEGIN
+    DECLARE branchId INT;
+
+    -- Fetch the branch ID for the given employee from general_employee table
+    SELECT branch_id INTO branchId 
+    FROM general_employee 
+    WHERE employee_id = empId;
+
+    -- Ensure branchId is valid
+    IF branchId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid employee ID or branch not found.';
+    END IF;
+
+    -- Fetch the account summaries for the relevant branch
+    SELECT 
+        a.account_number, 
+        CONCAT(c.first_name, ' ', c.last_name) AS account_holder_name, 
+        at.name AS account_type, 
+        a.acc_balance
+    FROM 
+        account a
+    JOIN 
+        customer c ON a.customer_id = c.id
+    JOIN 
+        account_type at ON a.account_type_id = at.id
+    WHERE 
+        a.branch_id = branchId
+    ORDER BY 
+        a.account_number;
 END $$
 
 DELIMITER ;

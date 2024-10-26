@@ -76,6 +76,21 @@ exports.updateEmployeeFromId = async (req, res) => {
   }
 };
 
+exports.getEmployeesBranchId = async (req, res) => {
+  const { id } = req.params; // branchId is a route parameter
+  try {
+   
+    const employees = await employeeModel.branchIdOfEmployee(id);
+    if (employees.length > 0) {
+      res.status(200).json(employees);
+    } else {
+      res.status(404).send({ message: 'No manager employees found for this branch' });
+    }
+  } catch (err) {
+    res.status(500).send({ message: 'Error fetching manager employees', error: err.message });
+  }
+};
+
 // Delete an employee
 exports.deleteEmployee = async (req, res) => {
   const employeeId = req.params.id;
@@ -175,4 +190,13 @@ exports.removeEmployeeForTechnician = async (req, res) => {
         console.error(error);
         res.status(500).json({ msg: 'Server error while deleting employee' });
     }
+};
+
+exports.getPositionsOfEmployees = async (req, res) => {
+  try {
+    const positions = await employeeModel.getPositions();
+    res.status(200).json(positions);
+  } catch (err) {
+    res.status(500).send({ message: 'Error fetching positions', error: err.message });
+  }
 };
