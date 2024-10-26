@@ -83,7 +83,7 @@ CREATE TABLE `account` (
   `account_number` INT(8) ZEROFILL AUTO_INCREMENT,
   `account_type_id` INT,
   `customer_id` INT,
-  `withdrawals_used` INT,
+  `withdrawals_used` INT default 0,
   `acc_balance` DECIMAL(15,2),
   `branch_id` INT,
   PRIMARY KEY (`account_number`)
