@@ -29,24 +29,43 @@ exports.getRecentTransactionsByCustomerId = async (req, res) => {
   }
 };
 
-// Controller to get recent transactions (for employees only)
+// Controller: Get all recent transactions for the employee's branch
 exports.getAllRecentTransactions = async (req, res) => {
   try {
-      // Get the logged-in employee's ID from the request (assumed to be stored in req.user)
-      const employeeId = req.user.id;
+    const employeeId = req.user.id; // Get the logged-in employee's ID
 
-      // Use the Transaction model to fetch recent transactions for the employee's branch
-      const transactions = await Transaction.getAllRecentTransactions(employeeId);
+    const transactions = await Transaction.getAllRecentTransactions(employeeId);
 
-      if (transactions.length === 0) {
-          return res.status(404).json({ msg: 'No recent transactions found for your branch.' });
-      }
+    if (!transactions || transactions.length === 0) {
+      return res.status(404).json({ msg: 'No recent transactions found.' });
+    }
 
-      // Return the transactions as a JSON response
-      res.json(transactions);
+    res.status(200).json(transactions);
   } catch (error) {
-      console.error('Error fetching recent transactions:', error.message);
-      res.status(500).json({ msg: 'Server error while fetching recent transactions.' });
+    console.error('Error fetching transactions:', error);
+    res.status(500).json({ msg: 'Server error while fetching transactions.' });
+  }
+};
+
+// Get recent transactions by customer and account number
+exports.getRecentTransactionsByCustomerIdAndAccountNumber = async (req, res) => {
+  const { customerId, accountNumber } = req.query; // Extract query parameters
+
+  try {
+    if (!customerId || !accountNumber) {
+      return res.status(400).json({ message: 'Customer ID and account number are required.' });
+    }
+
+    const transactions = await transactionModel.getRecentTransactionsByCustomerIdAndAccountNumber(customerId, accountNumber);
+
+    if (!transactions || transactions.length === 0) {
+      return res.status(404).json({ message: 'No transactions found for this customer and account.' });
+    }
+
+    res.status(200).json(transactions);
+  } catch (err) {
+    console.error('Error fetching transactions:', err);
+    res.status(500).json({ message: 'Error fetching transactions', error: err.message });
   }
 };
 

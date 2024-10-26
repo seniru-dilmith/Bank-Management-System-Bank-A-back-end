@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
 const Loan = require('../models/Loan');
+const Account = require('../models/Account'); 
 
 // Controller function to get loans for the logged-in customer
 exports.getCustomerLoans = async (req, res) => {
@@ -71,6 +72,39 @@ exports.getLoanDetails = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Server error during loan details retrieval' });
+    }
+};
+
+// Controller for employee to submit a loan request for a customer
+exports.requestLoanByEmployee = async (req, res) => {
+    const { customerAccountNumber, loanAmount, loanTerm, interestRate, typeId } = req.body;
+    try {
+      const account = await Account.findOne({ where: { account_number: customerAccountNumber } });
+      if (!account) return res.status(404).json({ message: 'Customer account not found' });
+  
+      const loan = await Loan.requestLoanByEmployee({
+        customerId: account.customer_id,
+        loanAmount,
+        loanTerm,
+        interestRate,
+        branchId: account.branch_id,
+        typeId,
+      });
+  
+      res.status(201).json({ message: 'Loan application submitted successfully', loan });
+    } catch (error) {
+      console.error('Error submitting loan request:', error);
+      res.status(500).json({ message: 'Server error' });
+    }
+};
+
+exports.getLoanTypes = async (req, res) => {
+    try {
+        const types = await Loan.types();
+        res.json(types);
+    } catch (error) {
+        console.error('Error getting loan types:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 };
 

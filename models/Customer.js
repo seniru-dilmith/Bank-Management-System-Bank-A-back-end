@@ -22,6 +22,11 @@ class Customer {
     static async updateAddress(id, newAddress) {
         await db.query('UPDATE customer SET address = ? WHERE id = ?', [newAddress, id]);
     }
+
+    static async findAllCustomers() {
+        const [results] = await db.query('SELECT * FROM customer_details');
+        return results;
+    }
 }
 
 module.exports = Customer;

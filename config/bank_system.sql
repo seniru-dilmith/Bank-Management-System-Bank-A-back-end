@@ -1,4 +1,4 @@
-DROP DATABASE IF EXISTS `bank_system`;
+DROP DATABASE `bank_system`;
 CREATE DATABASE `bank_system`;
 USE `bank_system`;
 
@@ -83,7 +83,7 @@ CREATE TABLE `account` (
   `account_number` INT(8) ZEROFILL AUTO_INCREMENT,
   `account_type_id` INT,
   `customer_id` INT,
-  `withdrawals_used` INT,
+  `withdrawals_used` INT default 0,
   `acc_balance` DECIMAL(15,2),
   `branch_id` INT,
   PRIMARY KEY (`account_number`)
@@ -360,26 +360,111 @@ END $$
 
 DELIMITER ;
 
--- stored procedure to get branch wise late installments (reports)
+-- stored procedure to get branch transactions within a specified time period
 DELIMITER $$
 
-CREATE PROCEDURE `branch_wise_late_installments`(IN branchId INT)
+CREATE PROCEDURE get_branch_transactions(
+    IN emp_id INT,
+    IN start_date DATE,
+    IN end_date DATE
+)
 BEGIN
-  SELECT l.id AS loan_id, c.first_name, c.last_name, li.next_due_date, li.installment_amount, li.paid
-  FROM loan l
-  JOIN loan_installment li ON l.id = li.loan_id
-  JOIN customer c ON l.customer_id = c.id
-  JOIN account a ON a.customer_id = c.id
-  WHERE a.branch_id = branchId
-    AND li.next_due_date < CURDATE()
-    AND li.paid = 0;
+    DECLARE branchId INT;
+
+    -- Fetch the branch ID for the logged-in employee
+    SELECT branch_id INTO branchId 
+    FROM manager_employee 
+    WHERE manager_id = emp_id;
+
+    -- Debugging: Display the branchId
+    SELECT branchId AS fetched_branch_id;
+
+    -- Ensure the branch ID exists
+    IF branchId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Branch not found for the provided employee.';
+    END IF;
+
+    -- Fetch transactions within the specified time period
+    SELECT 
+        t.id AS transaction_id,
+        t.timestamp AS transaction_time,
+        t.from_account_number,
+        t.to_account_number,
+        t.amount,
+        tt.name AS transaction_type,
+        t.beneficiary_name,
+        t.receiver_reference,
+        t.my_reference
+    FROM 
+        transaction t
+    JOIN 
+        account a ON t.from_account_number = a.account_number 
+                   OR t.to_account_number = a.account_number
+    JOIN 
+        transaction_type tt ON t.transaction_type_id = tt.id
+    WHERE 
+        a.branch_id = branchId
+        AND t.timestamp BETWEEN start_date AND end_date
+    ORDER BY 
+        t.timestamp DESC;
 END $$
 
 DELIMITER ;
 
--- Procedure: sp_get_recent_transactions_by_branch
+-- stored procedure to get branch wise late installments (reports)
 DELIMITER $$
-CREATE PROCEDURE sp_get_recent_transactions_by_branch(IN emp_id INT)
+
+CREATE PROCEDURE branch_wise_late_installments(
+    IN emp_id INT
+)
+BEGIN
+    DECLARE branchId INT;
+
+    -- Fetch the branch ID for the logged-in employee
+    SELECT branch_id INTO branchId 
+    FROM manager_employee 
+    WHERE manager_id = emp_id;
+
+    -- Debugging: Display the branchId
+    SELECT branchId AS fetched_branch_id;
+
+    -- Ensure the branch ID exists
+    IF branchId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Branch not found for the provided employee.';
+    END IF;
+
+    -- Fetch late installments for the branch
+    SELECT 
+        l.id AS loan_id, 
+        c.first_name, 
+        c.last_name, 
+        li.next_due_date, 
+        li.installment_amount, 
+        li.paid 
+    FROM 
+        loan_installment li
+    JOIN 
+        loan l ON li.loan_id = l.id
+    JOIN 
+        customer c ON l.customer_id = c.id
+    JOIN 
+        account a ON a.customer_id = c.id
+    WHERE 
+        a.branch_id = branchId
+        AND li.next_due_date < CURDATE()
+        AND li.paid = 0
+    ORDER BY 
+        li.next_due_date ASC;
+END $$
+
+DELIMITER ;
+
+
+-- Procedure: get_recent_transactions_by_branch
+DELIMITER $$
+CREATE PROCEDURE get_recent_transactions_by_branch(IN emp_id INT)
 BEGIN
     -- Fetch the branch_id for the logged-in employee
     DECLARE branchId INT;
@@ -400,6 +485,49 @@ BEGIN
     LIMIT 20;
 END;
 DELIMETER ;
+
+
+-- Procedure: get_recent_transactions_for_branch employees
+DELIMITER $$
+
+CREATE PROCEDURE `get_recent_transactions_for_branch`(IN empId INT)
+BEGIN
+    DECLARE branchId INT;
+
+    -- Fetch the branch ID for the given employee
+    SELECT branch_id INTO branchId 
+    FROM general_employee 
+    WHERE employee_id = empId;
+
+    -- Ensure branchId is valid
+    IF branchId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid employee ID or branch not found.';
+    END IF;
+
+    -- Fetch recent transactions for the branch
+    SELECT 
+        t.id AS transaction_id, 
+        t.timestamp, 
+        CONCAT(c.first_name, ' ', c.last_name) AS account_holder_name, 
+        tt.name AS transaction_type, 
+        t.amount
+    FROM 
+        transaction t
+    JOIN 
+        account a ON t.from_account_number = a.account_number 
+    JOIN 
+        customer c ON a.customer_id = c.id
+    JOIN 
+        transaction_type tt ON t.transaction_type_id = tt.id
+    WHERE 
+        a.branch_id = branchId
+    ORDER BY 
+        t.timestamp DESC
+    LIMIT 10;
+END $$
+
+DELIMITER ;
 
 -- Procedure: GetCustomerAccountSummary
 DELIMITER $$
@@ -538,7 +666,9 @@ DELIMITER $$
 CREATE PROCEDURE UpdateLoanStatus(IN p_loanId INT, IN p_newStatus VARCHAR(50))
 BEGIN
     UPDATE loan
-    SET status = p_newStatus
+    SET 
+      status = p_newStatus,
+      start_date = CURDATE()
     WHERE id = p_loanId AND status = 'pending';
 END $$
 
@@ -590,6 +720,109 @@ BEGIN
 
   END IF;
 END $$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE PROCEDURE GetBranchAccountSummaries(IN empId INT)
+BEGIN
+    DECLARE branchId INT;
+
+    -- Fetch the branch ID for the given employee from general_employee table
+    SELECT branch_id INTO branchId 
+    FROM general_employee 
+    WHERE employee_id = empId;
+
+    -- Ensure branchId is valid
+    IF branchId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid employee ID or branch not found.';
+    END IF;
+
+    -- Fetch the account summaries for the relevant branch
+    SELECT 
+        a.account_number, 
+        CONCAT(c.first_name, ' ', c.last_name) AS account_holder_name, 
+        at.name AS account_type, 
+        a.acc_balance
+    FROM 
+        account a
+    JOIN 
+        customer c ON a.customer_id = c.id
+    JOIN 
+        account_type at ON a.account_type_id = at.id
+    WHERE 
+        a.branch_id = branchId
+    ORDER BY 
+        a.account_number;
+END $$
+
+DELIMITER ;
+
+-- Procedure: RequestLoan
+DELIMITER $$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `RequestLoan`(
+    IN p_customerId INT,
+    IN p_loanTypeId INT,
+    IN p_loanAmount DECIMAL(10, 2),
+    IN p_loanDuration INT
+)
+BEGIN
+    DECLARE v_fdAmount DECIMAL(15,2);
+    DECLARE v_fdAccountNumber INT;
+    DECLARE v_maxLoanAmount DECIMAL(15,2);
+    DECLARE v_savingsAccountNumber INT;
+    DECLARE v_status ENUM('approved', 'rejected');
+
+    -- Check if the customer has an FD account and retrieve the FD amount
+    SELECT amount, account_number 
+    INTO v_fdAmount, v_fdAccountNumber
+    FROM fixed_deposit 
+    WHERE customer_id = p_customerId
+    LIMIT 1;
+
+    -- Check if the customer has a Savings account bound to the FD
+    SELECT account_number 
+    INTO v_savingsAccountNumber
+    FROM account 
+    WHERE customer_id = p_customerId 
+    AND account_type_id IN (SELECT id FROM account_type WHERE name LIKE 'Savings%')
+    LIMIT 1;
+
+    IF v_fdAmount IS NULL THEN
+        -- Customer does not have an FD, loan is rejected
+        SET v_status = 'rejected';
+    ELSE
+        -- Calculate maximum loan amount (60% of FD amount, upper limit of 500,000)
+        SET v_maxLoanAmount = LEAST(v_fdAmount * 0.60, 500000);
+
+        IF p_loanAmount <= v_maxLoanAmount THEN
+            -- Approve the loan and deposit the amount to the savings account
+            SET v_status = 'approved';
+
+            -- Insert the loan record with approved status
+            INSERT INTO loan (customer_id, type_id, fixed_deposit_id, branch_id, status, loan_amount, loan_term, interest_rate, start_date)
+            VALUES (p_customerId, p_loanTypeId, v_fdAccountNumber, (SELECT branch_id FROM account WHERE account_number = v_savingsAccountNumber), 
+                    v_status, p_loanAmount, p_loanDuration, 5.00, CURDATE());
+
+            -- Deposit loan amount into the savings account
+            UPDATE account
+            SET acc_balance = acc_balance + p_loanAmount
+            WHERE account_number = v_savingsAccountNumber;
+
+        ELSE
+            -- Loan amount exceeds 60% of FD or upper limit, reject the loan
+            SET v_status = 'rejected';
+
+            -- Insert the loan record with rejected status
+            INSERT INTO loan (customer_id, type_id, fixed_deposit_id, branch_id, status, loan_amount, loan_term, interest_rate, start_date)
+            VALUES (p_customerId, p_loanTypeId, v_fdAccountNumber, (SELECT branch_id FROM account WHERE account_number = v_savingsAccountNumber), 
+                    v_status, p_loanAmount, p_loanDuration, 5.00, CURDATE());
+        END IF;
+    END IF;
+END
 
 DELIMITER ;
 
@@ -767,3 +1000,26 @@ VALUES
 (4, 4), -- Security Officer can Perform Physical Security Check
 
 (6, 6); -- Technician can Provide Technical Support
+
+-- Set specific loan installments as late by updating their next_due_date to past dates
+-- Ensure that the 'paid' column is 0 to mark them as unpaid
+
+UPDATE loan_installment 
+SET next_due_date = '2024-09-10', paid = 0
+WHERE id = 1;
+
+UPDATE loan_installment 
+SET next_due_date = '2024-09-15', paid = 0
+WHERE id = 2;
+
+UPDATE loan_installment 
+SET next_due_date = '2024-08-30', paid = 0
+WHERE id = 3;
+
+UPDATE loan_installment 
+SET next_due_date = '2024-09-25', paid = 0
+WHERE id = 4;
+
+UPDATE loan_installment 
+SET next_due_date = '2024-10-01', paid = 0
+WHERE id = 5;
