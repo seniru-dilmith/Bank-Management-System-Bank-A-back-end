@@ -1,7 +1,10 @@
 const customerAccountModel = require('../models/CustomerAccountModel');
 const EmployeeModel = require('../models/EmployeeModel')
+const AccountType = require('../models/AccountType');
+const Customer = require('../models/Customer');
+const Account = require('../models/Account');
 
-const getBranchIdOfEmployee = async (req, res) => {
+exports.getBranchIdOfEmployee = async (req, res) => {
   try {
     const response = await EmployeeModel.getBranchIdOfEmployee(req.user.id);
     console.log(response);
@@ -13,7 +16,7 @@ const getBranchIdOfEmployee = async (req, res) => {
 }
 
 // Get all customerAccounts by Branch
-const getCustomerAccountsByBranch = async (req, res) => {
+exports.getCustomerAccountsByBranch = async (req, res) => {
   const { branchId } = req.params;
   try {
    
@@ -25,7 +28,7 @@ const getCustomerAccountsByBranch = async (req, res) => {
   }
 };
 
-const getAccountSummaries = async (req, res) => {
+exports.getAccountSummaries = async (req, res) => {
   const { emp_id } = req.params;
   try {
     const accountSummaries = await customerAccountModel.getAccountSummaries(emp_id);
@@ -35,11 +38,35 @@ const getAccountSummaries = async (req, res) => {
   }
 };
 
+exports.getAccountTypes = async (req, res) => {
+  try {
+    const accountTypes = await AccountType.findAll();
+    
+    res.status(200).json(accountTypes);
+  } catch (err) {
+    res.status(500).send({ message: 'Error fetching account types', error: err.message });
+  }
+};
 
-module.exports = {
- 
-  getCustomerAccountsByBranch,
-  getBranchIdOfEmployee,
-  getAccountSummaries
- 
+exports.getCustomerDetails = async (req, res) => {
+  try {
+    const customerDetails = await Customer.findAllCustomers();
+    res.status(200).json(customerDetails);
+  } catch (err) {
+    res.status(500).send({ message: 'Error fetching customer details', error: err.message });
+  }
+};
+
+exports.openAccount = async (req, res) => {
+  const { account_type_id, customer_id, initial_deposit } = req.body;
+  try {
+    if (!account_type_id || !customer_id || !initial_deposit) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+    const response = await Account.openAccount(account_type_id, customer_id, initial_deposit, req.user.id);
+    res.status(201).json(response);
+  } catch (err) {
+    console.error('Error opening account:', err);
+    res.status(500).send({ message: 'Error opening account', error: err.message });
+  }
 };
