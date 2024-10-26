@@ -14,6 +14,7 @@ class Account {
             VALUES (?, ?, (SELECT branch_id FROM general_employee WHERE employee_id = ?), ?)`;
         const [results] = await db.query(query, [customer_id, account_type_id, employee_id, initial_deposit]);
         return results;
+    };
 
     // Fetch account details by account number
     static async findOne({ where: { account_number } }) {
@@ -21,7 +22,7 @@ class Account {
         const [account] = await db.query(query, [account_number]);
         return account[0]; // Return the first result (or undefined if not found)
 
-    }
+    };
 }
 
 module.exports = Account;
