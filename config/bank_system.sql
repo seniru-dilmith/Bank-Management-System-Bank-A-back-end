@@ -603,22 +603,6 @@ END $$
 
 DELIMITER ;
 
--- Procedure: RequestLoan
-DELIMITER $$
-
-CREATE PROCEDURE RequestLoan(
-    IN p_customerId INT,
-    IN p_loanTypeId INT,
-    IN p_loanAmount DECIMAL(10, 2),
-    IN p_loanDuration INT
-)
-BEGIN
-    -- Insert the loan request with a default status of 'pending'
-    INSERT INTO loan (customer_id, type_id, loan_amount, loan_term, status)
-    VALUES (p_customerId, p_loanTypeId, p_loanAmount, p_loanDuration, 'pending');
-END $$
-
-DELIMITER ;
 
 -- Procedure: GetLoanDetails
 DELIMITER $$
@@ -763,68 +747,82 @@ DELIMITER ;
 -- Procedure: RequestLoan
 DELIMITER $$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `RequestLoan`(
+CREATE PROCEDURE RequestLoan (
     IN p_customerId INT,
     IN p_loanTypeId INT,
     IN p_loanAmount DECIMAL(10, 2),
     IN p_loanDuration INT
 )
 BEGIN
-    DECLARE v_fdAmount DECIMAL(15,2);
+    DECLARE v_fdAmount DECIMAL(15, 2);
     DECLARE v_fdAccountNumber INT;
-    DECLARE v_maxLoanAmount DECIMAL(15,2);
+    DECLARE v_maxLoanAmount DECIMAL(15, 2);
     DECLARE v_savingsAccountNumber INT;
     DECLARE v_status ENUM('approved', 'rejected');
 
-    -- Check if the customer has an FD account and retrieve the FD amount
-    SELECT amount, account_number 
+    -- Retrieve the FD amount and account number if the customer has an FD
+    SELECT amount, account_number
     INTO v_fdAmount, v_fdAccountNumber
-    FROM fixed_deposit 
+    FROM fixed_deposit
     WHERE customer_id = p_customerId
     LIMIT 1;
 
-    -- Check if the customer has a Savings account bound to the FD
-    SELECT account_number 
+    -- Retrieve the savings account number associated with the customer
+    SELECT account_number
     INTO v_savingsAccountNumber
-    FROM account 
-    WHERE customer_id = p_customerId 
-    AND account_type_id IN (SELECT id FROM account_type WHERE name LIKE 'Savings%')
+    FROM account
+    WHERE customer_id = p_customerId
+      AND account_type_id IN (
+          SELECT id FROM account_type WHERE name LIKE 'Savings%'
+      )
     LIMIT 1;
 
+    -- If no FD account exists, reject the loan
     IF v_fdAmount IS NULL THEN
-        -- Customer does not have an FD, loan is rejected
         SET v_status = 'rejected';
     ELSE
-        -- Calculate maximum loan amount (60% of FD amount, upper limit of 500,000)
+        -- Calculate the maximum loan amount (60% of FD or 500,000, whichever is lower)
         SET v_maxLoanAmount = LEAST(v_fdAmount * 0.60, 500000);
 
+        -- Check if the requested loan amount is within the allowed limit
         IF p_loanAmount <= v_maxLoanAmount THEN
-            -- Approve the loan and deposit the amount to the savings account
+            -- Approve the loan
             SET v_status = 'approved';
 
-            -- Insert the loan record with approved status
-            INSERT INTO loan (customer_id, type_id, fixed_deposit_id, branch_id, status, loan_amount, loan_term, interest_rate, start_date)
-            VALUES (p_customerId, p_loanTypeId, v_fdAccountNumber, (SELECT branch_id FROM account WHERE account_number = v_savingsAccountNumber), 
-                    v_status, p_loanAmount, p_loanDuration, 5.00, CURDATE());
+            -- Insert the approved loan into the loan table
+            INSERT INTO loan (
+                customer_id, type_id, fixed_deposit_id, branch_id,
+                status, loan_amount, loan_term, interest_rate, start_date
+            ) VALUES (
+                p_customerId, p_loanTypeId, v_fdAccountNumber,
+                (SELECT branch_id FROM account WHERE account_number = v_savingsAccountNumber),
+                v_status, p_loanAmount, p_loanDuration, 5.00, CURDATE()
+            );
 
-            -- Deposit loan amount into the savings account
+            -- Update the savings account balance with the loan amount
             UPDATE account
             SET acc_balance = acc_balance + p_loanAmount
             WHERE account_number = v_savingsAccountNumber;
 
         ELSE
-            -- Loan amount exceeds 60% of FD or upper limit, reject the loan
+            -- Reject the loan if it exceeds the limit
             SET v_status = 'rejected';
 
-            -- Insert the loan record with rejected status
-            INSERT INTO loan (customer_id, type_id, fixed_deposit_id, branch_id, status, loan_amount, loan_term, interest_rate, start_date)
-            VALUES (p_customerId, p_loanTypeId, v_fdAccountNumber, (SELECT branch_id FROM account WHERE account_number = v_savingsAccountNumber), 
-                    v_status, p_loanAmount, p_loanDuration, 5.00, CURDATE());
+            -- Insert the rejected loan into the loan table
+            INSERT INTO loan (
+                customer_id, type_id, fixed_deposit_id, branch_id,
+                status, loan_amount, loan_term, interest_rate, start_date
+            ) VALUES (
+                p_customerId, p_loanTypeId, v_fdAccountNumber,
+                (SELECT branch_id FROM account WHERE account_number = v_savingsAccountNumber),
+                v_status, p_loanAmount, p_loanDuration, 5.00, CURDATE()
+            );
         END IF;
     END IF;
-END
+END $$
 
 DELIMITER ;
+
 
 -- Sample Data Insertions
 
@@ -911,13 +909,18 @@ VALUES
 ('Transfer', 'Transfer money between accounts.');
 
 -- Insert transactions
-INSERT INTO `transaction` (`customer_id`, `from_account_number`, `to_account_number`, `amount`, `transaction_type_id`, `beneficiary_name`, `receiver_reference`, `my_reference`)
+INSERT INTO `transaction` (`customer_id`, `from_account_number`, `to_account_number`, `amount`, `transaction_type_id`, `beneficiary_name`, `receiver_reference`, `my_reference`, `timestamp`)
 VALUES 
-(1, 10000001, 10000002, 500.00, 1, 'John Doe', 'ABC123', 'XYZ987'),  -- deposit
-(2, 10000002, 10000003, 1000.00, 2, 'Sam Adams', 'DEF456', 'XYZ654'),  -- withdrawal
-(3, 10000003, 10000001, 2000.00, 3, 'Alice Smith', 'GHI789', 'XYZ321'),  -- transfer
-(4, 10000004, 10000002, 750.00, 1, 'Elder John', 'JKL012', 'XYZ876'),  -- deposit
-(5, 10000005, 10000003, 1200.00, 2, 'XYZ Corp', 'MNO345', 'XYZ543');  -- withdrawal
+(1, 10000001, 10000002, 500.00, 1, 'John Doe', 'ABC123', 'XYZ987', '2024-07-10 17:57:39'),  -- deposit
+(2, 10000002, 10000003, 1000.00, 2, 'Sam Adams', 'DEF456', 'XYZ654', '2024-08-02 17:57:39'),  -- withdrawal
+(3, 10000003, 10000001, 2000.00, 3, 'Alice Smith', 'GHI789', 'XYZ321', '2024-09-25 17:57:39'),  -- transfer
+(4, 10000004, 10000002, 750.00, 1, 'Elder John', 'JKL012', 'XYZ876', '2024-09-21 17:57:39'),  -- deposit
+(5, 10000005, 10000003, 1200.00, 2, 'XYZ Corp', 'MNO345', 'XYZ543', '2024-09-14 17:57:39'),  -- withdrawal
+(1, 10000001, 10000002, 2500.00, 1, 'John Doe', 'ABC123', 'XYZ987', '2024-09-24 17:57:39'),  -- deposit
+(2, 10000002, 10000003, 3500.00, 2, 'Sam Adams', 'DEF456', 'XYZ654', '2024-10-27 17:57:39'),  -- withdrawal
+(3, 10000003, 10000001, 5000.00, 3, 'Alice Smith', 'GHI789', 'XYZ321', '2024-10-18 17:57:39'),  -- transfer
+(4, 10000004, 10000002, 7500.00, 1, 'Elder John', 'JKL012', 'XYZ876', '2024-10-12 17:57:39'),  -- deposit
+(5, 10000005, 10000003, 12000.00, 2, 'XYZ Corp', 'MNO345', 'XYZ543', '2024-10-16 17:57:39');  -- withdrawal
 
 -- Insert employee positions
 INSERT INTO `position` (`name`, `description`)
