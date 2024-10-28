@@ -86,6 +86,7 @@ CREATE TABLE `account` (
   `withdrawals_used` INT default 0,
   `acc_balance` DECIMAL(15,2),
   `branch_id` INT,
+  CHECK (`withdrawals_used` BETWEEN 0 AND 5),
   PRIMARY KEY (`account_number`)
 );
 
@@ -821,8 +822,102 @@ BEGIN
     END IF;
 END $$
 
+-- functions
+
 DELIMITER ;
 
+--function to calculate loan amount
+DELIMITER $$
+
+CREATE FUNCTION calculate_loan_amount(
+    loan_id INT -- Input: Loan ID
+) RETURNS DECIMAL(15,2) -- Returns the total amount as a decimal value
+DETERMINISTIC -- Ensures consistent output for the same input
+BEGIN
+    DECLARE principal DECIMAL(15,2); -- Store the loan amount
+    DECLARE rate DECIMAL(5,2); -- Store the interest rate
+    DECLARE total DECIMAL(15,2); -- Store the final total amount
+
+    -- Retrieve the principal amount and interest rate from the loan table
+    SELECT loan_amount, interest_rate 
+    INTO principal, rate
+    FROM loan 
+    WHERE id = loan_id;
+
+    -- Check if the loan exists; if not, return 0
+    IF principal IS NULL OR rate IS NULL THEN
+        RETURN 0;
+    END IF;
+
+    -- Calculate the total loan amount (Principal + Interest)
+    SET total = principal + (principal * rate / 100);
+
+    -- Return the calculated total
+    RETURN total;
+END $$
+
+DELIMITER ;
+
+-- calculates withdrawals left for a given account
+DELIMITER $$
+
+CREATE FUNCTION withdrawals_left(
+    acc_number INT -- Input: Account number parameter
+) RETURNS INT -- Returns the number of withdrawals left
+DETERMINISTIC -- Ensures consistent output for the same input
+BEGIN
+    DECLARE used_withdrawals INT DEFAULT 0; -- Store withdrawals used so far
+    DECLARE limit_per_month INT DEFAULT 5; -- Monthly withdrawal limit
+    DECLARE remaining_withdrawals INT; -- Store remaining withdrawals
+    DECLARE account_count INT; -- Store the number of matching accounts
+
+    -- Check how many rows match the given account number
+    SELECT COUNT(*) INTO account_count 
+    FROM account 
+    WHERE account_number = acc_number; -- Use the input parameter here
+
+    -- If more than one account is found, raise an error
+    IF account_count > 1 THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'More than one account found with the given account number';
+    END IF;
+
+    -- Retrieve the number of withdrawals used for this account
+    SELECT withdrawals_used 
+    INTO used_withdrawals 
+    FROM account 
+    WHERE account_number = acc_number -- Use the input parameter here
+    LIMIT 1;
+
+    -- Calculate the remaining withdrawals
+    SET remaining_withdrawals = limit_per_month - used_withdrawals;
+
+    -- Ensure the remaining withdrawals are non-negative
+    IF remaining_withdrawals < 0 THEN
+        SET remaining_withdrawals = 0;
+    END IF;
+
+    -- Return the number of withdrawals left
+    RETURN remaining_withdrawals;
+END $$
+
+DELIMITER ;
+
+
+-- sql events
+DELIMITER $$
+
+CREATE EVENT reset_withdrawals_used
+ON SCHEDULE EVERY 1 MONTH
+STARTS (LAST_DAY(CURRENT_DATE) + INTERVAL 1 DAY)
+DO
+BEGIN
+    -- Reset the withdrawals_used column for all accounts
+    UPDATE account
+    SET withdrawals_used = 0;
+END $$
+
+DELIMITER ;
 
 -- Sample Data Insertions
 
