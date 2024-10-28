@@ -16,7 +16,7 @@ class Report {
       'CALL branch_wise_late_installments(?)', 
       [emp_id] // Use employee ID to fetch late installments
     );
-    return results[0]; // First result set contains the loan installments
+    return results[1]; // First result set contains the loan installments
   }
 }
 
