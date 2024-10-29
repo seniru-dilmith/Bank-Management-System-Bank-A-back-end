@@ -17,7 +17,8 @@ exports.getBranchIdByManager = async (managerId) => {
       WHERE manager_id = ?
     `;
     const [result] = await db.query(query, [managerId]);
-    return result.length > 0 ? result[0].branch_id : null; // Return the branch ID or null if not found
+    // Return the branch ID or null if not found
+    return result.length > 0 ? result[0].branch_id : null; 
 };
 
 // Update a branch by ID
@@ -32,14 +33,14 @@ exports.updateBranch = async (id, branchData) => {
     return result;
 };
 
-// get positions list
+// Get positions list
 exports.getPositions = async () => {
     const query = 'SELECT id, name AS title FROM position WHERE name != "Branch Manager"';
     const [result] = await db.query(query);
     return result;
 }
 
-// update branch details
+// Update branch details
 exports.updateBranchDetails = async (branchId, branchData) => {
     const query = `
       UPDATE branch

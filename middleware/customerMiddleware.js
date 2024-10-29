@@ -16,7 +16,7 @@ exports.customerMiddleware = async (req, res, next) => {
             return res.status(403).json({ msg: 'Access denied: Only Customers are allowed' });
         }
 
-        next(); // Proceed if the user is a Customer
+        next(); 
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Server error during customer check' });

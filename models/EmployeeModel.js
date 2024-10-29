@@ -21,7 +21,7 @@ exports.getGeneralEmployeesByBranchId= async (branchId) =>{
     INNER JOIN general_employee ge ON e.id = ge.employee_id
     WHERE ge.branch_id = ?`;
 
-  const [employees] = await db.query(query, [branchId]); // Pass branchId as a parameter to the query
+  const [employees] = await db.query(query, [branchId]);
   return employees;
 }
 
@@ -32,7 +32,7 @@ exports.getManagerEmployeesByBranchId = async (branchId) =>{
     INNER JOIN manager_employee me ON e.id = me.manager_id
     WHERE me.branch_id = ?`;
 
-  const [employees] = await db.query(query, [branchId]); // Pass branchId as a parameter to the query
+  const [employees] = await db.query(query, [branchId]); 
   return employees;
 };
 

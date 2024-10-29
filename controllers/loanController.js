@@ -12,7 +12,8 @@ exports.getCustomerLoans = async (req, res) => {
     }
 
     try {
-        const customerId = req.user.id; // Get the customer ID from the request
+        // Get the customer ID from the request
+        const customerId = req.user.id; 
         const loans = await Loan.findByCustomerId(customerId);
 
         if (loans.length === 0) {
@@ -36,7 +37,7 @@ exports.requestLoan = async (req, res) => {
 
     try {
         const { loanType, amount, duration } = req.body;
-        const customerId = req.user.id;  // Get the current logged-in customer's ID
+        const customerId = req.user.id; 
 
         // Use Loan model to submit loan request
         await Loan.requestLoan({ customerId, loanType, amount, duration });
@@ -57,9 +58,9 @@ exports.getLoanDetails = async (req, res) => {
     }
 
     try {
-        const loanId = req.params.id; // Get loan ID from URL params
-        const customerId = req.user.id; // Get the customer ID from the JWT token
-
+        const loanId = req.params.id; 
+        const customerId = req.user.id;
+        
         // Use Loan model to get loan details
         const loanDetails = await Loan.getLoanDetails(customerId, loanId);
 

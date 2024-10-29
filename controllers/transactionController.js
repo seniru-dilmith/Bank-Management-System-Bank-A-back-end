@@ -5,7 +5,7 @@ const Transaction = require('../models/Transaction');
 
 // Get all transactions by branch Id
 exports.getRecentTransactionsByBranchId = async (req, res) => {
-  const { branchId } = req.params; // branchId is a route parameter
+  const { branchId } = req.params;
   try {
    
     const transactions = await  transactionModel.getRcentTransactionsByBranchId(branchId);
@@ -18,7 +18,7 @@ exports.getRecentTransactionsByBranchId = async (req, res) => {
 
 // Get all transactions by customer Id
 exports.getRecentTransactionsByCustomerId = async (req, res) => {
-  const { customerId } = req.params; // branchId is a route parameter
+  const { customerId } = req.params; 
   try {
    
     const transactions = await  transactionModel.getRcentTransactionsByCustomerId(customerId);
@@ -32,7 +32,7 @@ exports.getRecentTransactionsByCustomerId = async (req, res) => {
 // Controller: Get all recent transactions for the employee's branch
 exports.getAllRecentTransactions = async (req, res) => {
   try {
-    const employeeId = req.user.id; // Get the logged-in employee's ID
+    const employeeId = req.user.id; 
 
     const transactions = await Transaction.getAllRecentTransactions(employeeId);
 
@@ -49,7 +49,7 @@ exports.getAllRecentTransactions = async (req, res) => {
 
 // Get recent transactions by customer and account number
 exports.getRecentTransactionsByCustomerIdAndAccountNumber = async (req, res) => {
-  const { customerId, accountNumber } = req.query; // Extract query parameters
+  const { customerId, accountNumber } = req.query; 
 
   try {
     if (!customerId || !accountNumber) {
@@ -85,7 +85,6 @@ exports.doTransaction = async (req, res) => {
           myReference
       });
 
-      // If successful, return a success message
       res.json({ msg: 'Transaction successful' });
   } catch (error) {
       console.error('Transaction failed:', error);
