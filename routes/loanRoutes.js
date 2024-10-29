@@ -19,6 +19,6 @@ router.get('/loan-details/:id', authMiddleware, customerMiddleware, getLoanDetai
 router.post('/request-loan-emp', authMiddleware, employeeMiddleware, requestLoanByEmployee);
 
 //loan types
-router.get('/types', getLoanTypes);
+router.get('/types', authMiddleware, employeeMiddleware, getLoanTypes);
 
 module.exports = router;
