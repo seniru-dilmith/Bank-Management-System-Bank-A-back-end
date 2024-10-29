@@ -263,7 +263,7 @@ ON DELETE CASCADE ON UPDATE CASCADE,
 ADD FOREIGN KEY (`action_id`) REFERENCES `action`(`id`) 
 ON DELETE CASCADE ON UPDATE CASCADE;
 
--- views
+-- Views
 
 -- View to get customer details
 CREATE VIEW customer_details AS
@@ -275,7 +275,7 @@ CREATE VIEW `employee_details` AS
 SELECT `id`,`address`, `email`, `first_name`, `last_name`, `phone`, `nic`, `position_id`
 FROM `employee`;
 
--- indexes
+-- Indexes
 
 -- Index on loan status for faster retrieval of loans based on status
 CREATE INDEX idx_loan_status ON `loan`(`status`);
@@ -286,7 +286,7 @@ CREATE INDEX idx_transaction_timestamp ON `transaction`(`timestamp`);
 -- Index on loan installment due date for faster retrieval of installments based on due date
 CREATE INDEX idx_loan_installment_due_date ON `loan_installment`(`next_due_date`);
 
--- triggers and stored procedures
+-- Triggers and stored procedures
 
 -- Trigger to generate loan installments after loan approval
 DELIMITER $$
@@ -344,7 +344,7 @@ END $$
 
 DELIMITER ;
 
--- stored procedure to get detailed transactions for the past month for a specific branch (reports)
+-- Stored procedure to get detailed transactions for the past month for a specific branch (reports)
 DELIMITER $$
 
 CREATE PROCEDURE `branch_wise_transaction_details_last_month`(IN branchId INT)
@@ -361,7 +361,7 @@ END $$
 
 DELIMITER ;
 
--- stored procedure to get branch transactions within a specified time period
+-- Stored procedure to get branch transactions within a specified time period
 DELIMITER $$
 
 CREATE PROCEDURE get_branch_transactions(
@@ -413,7 +413,7 @@ END $$
 
 DELIMITER ;
 
--- stored procedure to get branch wise late installments (reports)
+-- Stored procedure to get branch wise late installments (reports)
 DELIMITER $$
 
 CREATE PROCEDURE branch_wise_late_installments(
@@ -822,11 +822,11 @@ BEGIN
     END IF;
 END $$
 
--- functions
+-- Functions
 
 DELIMITER ;
 
---function to calculate loan amount
+--Function to calculate loan amount
 DELIMITER $$
 
 CREATE FUNCTION calculate_loan_amount(
@@ -858,7 +858,7 @@ END $$
 
 DELIMITER ;
 
--- calculates withdrawals left for a given account
+--Function to calculates withdrawals left for a given account
 DELIMITER $$
 
 CREATE FUNCTION withdrawals_left(
@@ -904,7 +904,7 @@ END $$
 DELIMITER ;
 
 
--- sql events
+-- SQL events
 DELIMITER $$
 
 CREATE EVENT reset_withdrawals_used
@@ -1075,7 +1075,7 @@ VALUES
 (16, 1, 6), -- General Employee 16 at Head Office under Supervisor 6
 (17, 2, 7); -- General Employee 17 at North Branch under Supervisor 7
 
--- insert actions
+-- Insert actions
 INSERT INTO `action` (`action_name`, `description`)
 VALUES 
 ('Approve Loan', 'Approve a loan application'),
