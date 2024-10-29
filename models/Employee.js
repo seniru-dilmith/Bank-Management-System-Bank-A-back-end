@@ -92,14 +92,14 @@ class Employee {
     static async findById(id) {
         const query = 'SELECT * FROM employee WHERE id = ?';
         const [employees] = await db.query(query, [id]);
-        return employees[0];  // Return the first result
+        return employees[0];  
     }
 
     // Find employee by username
     static async findByUsername(username) {
         const query = 'SELECT * FROM employee WHERE username = ?';
         const [results] = await db.query(query, [username]);
-        return results[0];  // Return the first result if found
+        return results[0];  
     }
 
     // Find employee by email
@@ -111,7 +111,7 @@ class Employee {
             WHERE e.username = ?;
         `;
         const [result] = await db.query(query, [username]);
-        return result[0];  // Return the first matching employee
+        return result[0];  
     }
 }
 

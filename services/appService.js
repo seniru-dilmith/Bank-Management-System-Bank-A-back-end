@@ -14,7 +14,8 @@ const transactionRoutes = require('../routes/transactionRoutes');
 dotenv.config();
 const app = express();
 
-app.use(express.json()); // Parse JSON request bodies
+// Parse JSON request bodies
+app.use(express.json()); 
 
 // use the auth routes
 app.use('/auth', authRoutes);

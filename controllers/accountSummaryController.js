@@ -2,9 +2,8 @@ const Account = require('../models/Account');
 
 // Controller to get account summary for the logged-in user
 exports.getAccountSummary = async (req, res) => {
-    
-    const customerId = req.user.id;  // Get customer ID from JWT
-
+    // Get customer ID from JWT
+    const customerId = req.user.id;  
     try {
         // Use the Account model to fetch the account details
         const accounts = await Account.findByCustomerId(customerId);

@@ -26,7 +26,7 @@ class Loan {
     static async getLoanDetails(customerId, loanId) {
         const query = `CALL GetLoanDetails(?, ?);`;
         const [loanDetails] = await db.query(query, [customerId, loanId]);
-        return loanDetails[0][0];  // Accessing the result set from the stored procedure
+        return loanDetails[0][0];
     }
 
     // Method for an employee to submit a loan request

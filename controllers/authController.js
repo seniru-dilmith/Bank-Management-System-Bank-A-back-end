@@ -29,7 +29,7 @@ exports.login = async (req, res) => {
             // Set userType based on the employee's position
             if (position.position === 'Technician') userType = 'technician';
             else if (position.position === 'Branch Manager') userType = 'manager';
-            else userType = 'employee';  // Default to employee
+            else userType = 'employee'; 
         } else if (customer) {
             user = customer;
             userType = 'customer';
@@ -133,7 +133,7 @@ exports.changeName = async (req, res) => {
 // Change address
 exports.changeAddress = async (req, res) => {
     const { newAddress } = req.body;
-    const userId = req.user.id;  // User from JWT token
+    const userId = req.user.id;
 
     // Validating input
     const errors = validationResult(req);

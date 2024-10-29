@@ -4,7 +4,6 @@ const { authMiddleware } = require('../middleware/authMiddleware');
 const { getEmployees, updateEmployeeFromId, getGeneralEmployeesByBranchId, getManagerEmployeesByBranchId, getEmployee, deleteEmployee } = require('../controllers/employeeController');
 const { branchManagerMiddleware } = require('../middleware/branchManagerMiddleware');
 
-// Routes for employee management
 // Get all employees
 router.get('/get-employees', authMiddleware, branchManagerMiddleware, getEmployees);  
 
