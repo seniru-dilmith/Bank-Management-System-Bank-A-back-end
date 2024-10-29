@@ -17,7 +17,7 @@ exports.getEmployees = async (req, res) => {
 
 // Get general employees by branch ID
 exports.getGeneralEmployeesByBranchId = async (req, res) => {
-  const { branchId } = req.params; // branchId is a route parameter
+  const { branchId } = req.params;
   try {
    
     const employees = await  employeeModel.getGeneralEmployeesByBranchId(branchId);
@@ -34,7 +34,7 @@ exports.getGeneralEmployeesByBranchId = async (req, res) => {
 
 // Get manager employees by branch ID
 exports.getManagerEmployeesByBranchId = async (req, res) => {
-  const { branchId } = req.params; // branchId is a route parameter
+  const { branchId } = req.params; 
   try {
    
     const employees = await  employeeModel.getManagerEmployeesByBranchId(branchId);
@@ -77,7 +77,7 @@ exports.updateEmployeeFromId = async (req, res) => {
 };
 
 exports.getEmployeesBranchId = async (req, res) => {
-  const { id } = req.params; // branchId is a route parameter
+  const { id } = req.params;
   try {
    
     const employees = await employeeModel.branchIdOfEmployee(id);
@@ -160,7 +160,7 @@ exports.updateEmployeeForTechnician = async (req, res) => {
             await Employee.updateManagerBranch(id, branch_id);
         } else {
             // Update general employee branch and supervisor in general_employee table
-            await Employee.updateGeneralEmployee(id, branch_id, req.user.id);  // Assuming req.user.id is supervisor
+            await Employee.updateGeneralEmployee(id, branch_id, req.user.id);  
         }
 
         res.json({ msg: `Employee ${first_name} ${last_name} updated successfully` });

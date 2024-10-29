@@ -16,7 +16,7 @@ exports.getBranchManagerById = async (req, res) => {
   }
 };
 
-// get branch details
+// Get branch details
 exports.getBranchDetails = async (req, res) => {
   const branch_id = req.params.id;
 
@@ -73,8 +73,8 @@ exports.getBranchOfManager = async (req, res) => {
 
 // Update a Branch by Branch ID
 exports.updateBranchOfManager = async (req, res) => {
-  const branch_id = req.params.id; // Get the branch ID from the route parameters
-  const { name, branch_address, contact_number } = req.body; // Extract updated data from request body
+  const branch_id = req.params.id;
+  const { name, branch_address, contact_number } = req.body; 
   
   try {
     // Call the update method and check if any rows were affected
