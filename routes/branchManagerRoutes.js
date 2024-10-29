@@ -6,19 +6,25 @@ const { authMiddleware } = require('../middleware/authMiddleware');
 const { branchManagerMiddleware } = require('../middleware/branchManagerMiddleware');
 const { route } = require('./authRoutes');
 
-// Routes for BranchManager management
-router.get('/get-branch/:id', authMiddleware, branchManagerMiddleware, getBranchManagerById); // Get BranchManager by ID
+// Get BranchManager by ID
+router.get('/get-branch/:id', authMiddleware, branchManagerMiddleware, getBranchManagerById); 
 
-router.get('/get-branch-details', authMiddleware, branchManagerMiddleware, getBranchOfManager); // Get Branch details
+// Get Branch details
+router.get('/get-branch-details', authMiddleware, branchManagerMiddleware, getBranchOfManager); 
 
-router.get('/get-positions', authMiddleware, branchManagerMiddleware, getPositions); // get positions list
+// Get positions list
+router.get('/get-positions', authMiddleware, branchManagerMiddleware, getPositions); 
 
-router.get('/get-branch-id', authMiddleware, branchManagerMiddleware, getBranchIdByManager); // get barnch id of a manager
+// Get barnch id of a manager
+router.get('/get-branch-id', authMiddleware, branchManagerMiddleware, getBranchIdByManager); 
 
-router.put('/update-branch-details/:id', authMiddleware, branchManagerMiddleware, updateBranchOfManager); // Update Branch details of a specific BranchManager
+// Update Branch details of a specific BranchManager
+router.put('/update-branch-details/:id', authMiddleware, branchManagerMiddleware, updateBranchOfManager); 
 
-router.get('/transaction-report', authMiddleware, branchManagerMiddleware, getTransactionReport); // Get transaction report
+// Get transaction report
+router.get('/transaction-report', authMiddleware, branchManagerMiddleware, getTransactionReport); 
 
-router.get('/late-loan-report', authMiddleware, branchManagerMiddleware, getLateLoanReport);  // Get late loan report
+// Get late loan report
+router.get('/late-loan-report', authMiddleware, branchManagerMiddleware, getLateLoanReport);  
 
 module.exports = router;

@@ -7,7 +7,7 @@ dotenv.config();
 
 // Initialize express app
 const app = express();
-app.use(express.json());  // Parse JSON request bodies
+app.use(express.json());  
 
 app.get('/test-db', async (req, res) => {
     try {

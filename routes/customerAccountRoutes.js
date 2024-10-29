@@ -4,10 +4,9 @@ const { getCustomerAccountsByBranch, getBranchIdOfEmployee, getAccountSummaries,
 const { openAccount } = require('../controllers/customerAccountController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { employeeMiddleware } = require('../middleware/employeeMiddleware');
-// const { authenticateToken } = require('../middlewares/authMiddleware'); // Protected routes
 
 // Routes for customerAccount management
-router.get('/summaries/branch/:branchId', authMiddleware, employeeMiddleware, getCustomerAccountsByBranch); // Get customerAccount by ID
+router.get('/summaries/branch/:branchId', authMiddleware, employeeMiddleware, getCustomerAccountsByBranch);
 
 // branch id of an employee
 router.get('/employee/branch-id', authMiddleware, employeeMiddleware, getBranchIdOfEmployee);
