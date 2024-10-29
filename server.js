@@ -12,15 +12,15 @@ const app = express();
 
 // Enable CORS
 app.use(cors({
-    origin: 'http://localhost:3000',  // Allow requests from this origin
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],  // Specify allowed HTTP methods
-    credentials: true,  // If you are using cookies or sessions
+    origin: 'http://localhost:3000',  
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],  
+    credentials: true,  
   }));
   
 
-app.use(express.json());  // Parse JSON request bodies
-app.use(customerDetails);  // Use the test-db route
-app.use(appService); // Use the appService route
+app.use(express.json());  
+app.use(customerDetails);  
+app.use(appService);
 
 // Set up port from environment variables or default to 5000
 const PORT = process.env.PORT || process.env.BACKEND_PORT;

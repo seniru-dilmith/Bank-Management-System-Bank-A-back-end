@@ -3,7 +3,7 @@ const { login, changePassword, changeName, changeAddress } = require('../control
 const { loginValidation, changePasswordValidation, changeNameValidation, changeAddressValidation } = require('../validations/authValidation');
 const { authMiddleware } = require('../middleware/authMiddleware');
 
-const router = express.Router(); // Initialize express router
+const router = express.Router(); 
 
 // Route to login a user
 router.post('/login', loginValidation, login);

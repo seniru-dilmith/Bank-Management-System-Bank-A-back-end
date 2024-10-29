@@ -5,10 +5,10 @@ class Transaction {
     static async getAllRecentTransactions(employeeId) {
         const query = 'CALL get_recent_transactions_for_branch(?);';
         const [transactions] = await db.query(query, [employeeId]);
-        return transactions[0]; // Return the actual transaction data
+        return transactions[0]; 
     }
 
-    // Method to check account balance for the "from" account (can be removed as it's now handled in the stored procedure)
+    // Method to check account balance for the "from" account
     static async getAccountBalance(accountNumber) {
         const query = 'SELECT acc_balance FROM account WHERE account_number = ?';
         const [result] = await db.query(query, [accountNumber]);

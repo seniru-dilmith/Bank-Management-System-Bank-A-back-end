@@ -24,7 +24,7 @@ exports.addBranch = async (req, res) => {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, branch_address, contact_number } = req.body;  // Get the branch details from the request body
+    const { name, branch_address, contact_number } = req.body; 
     try {
         await Branch.create({ name, branch_address, contact_number });
         res.json({ msg: 'Branch created successfully' });
@@ -40,8 +40,9 @@ exports.updateBranch = async (req, res) => {
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-    
-    const { currentName, newName, branch_address, contact_number } = req.body;  // Get the branch details from the request body
+
+    // Get the branch details from the request body
+    const { currentName, newName, branch_address, contact_number } = req.body;  
     
     try {
         await Branch.update({ currentName, newName, branch_address, contact_number });
@@ -53,7 +54,8 @@ exports.updateBranch = async (req, res) => {
 };
 
 exports.removeBranch = async (req, res) => {
-    const { id } = req.params;  // Get the branch ID from the request parameters
+    // Get the branch ID from the request parameters
+    const { id } = req.params;  
     try {
         const branch = await Branch.findById(id);
 

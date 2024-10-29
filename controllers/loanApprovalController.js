@@ -18,7 +18,7 @@ exports.getPendingLoans = async (req, res) => {
 
 // Controller to approve or reject a loan application
 exports.updateLoanStatus = async (req, res) => {
-    const { loanId, action } = req.body;  // 'action' can be 'approve' or 'reject'
+    const { loanId, action } = req.body; 
 
     if (!loanId || !['approve', 'reject'].includes(action)) {
         return res.status(400).json({ msg: 'Invalid loan ID or action' });

@@ -17,7 +17,7 @@ exports.branchManagerMiddleware = async (req, res, next) => {
             return res.status(403).json({ msg: 'Access denied: Only Branch Managers are allowed' });
         }
 
-        next(); // If the user is a Branch Manager, proceed
+        next();
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Server error during branch manager check' });

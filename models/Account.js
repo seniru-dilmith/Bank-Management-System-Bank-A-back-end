@@ -5,9 +5,10 @@ class Account {
     static async findByCustomerId(customerId) {
         const query = `CALL GetCustomerAccountSummary(?)`;
         const [accounts] = await db.query(query, [customerId]);
-        return accounts[0]; // Stored procedures in MySQL return an array of results
+        // Stored procedures in MySQL return an array of results
+        return accounts[0]; 
     }
-    // open a new account
+    // Open a new account
     static async openAccount(account_type_id, customer_id, initial_deposit, employee_id) {
         const query = `
             INSERT INTO account (customer_id, account_type_id, branch_id, acc_balance) 
@@ -20,8 +21,7 @@ class Account {
     static async findOne({ where: { account_number } }) {
         const query = `SELECT * FROM account WHERE account_number = ?`;
         const [account] = await db.query(query, [account_number]);
-        return account[0]; // Return the first result (or undefined if not found)
-
+        return account[0]; 
     };
 }
 

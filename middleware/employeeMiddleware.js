@@ -17,7 +17,7 @@ exports.employeeMiddleware = async (req, res, next) => {
             return res.status(403).json({ msg: 'Access denied: Only Employees are allowed' });
         }
 
-        next(); // Proceed if the user is an Employee
+        next(); 
     } catch (error) {
         console.error(error);
         res.status(500).json({ msg: 'Server error during employee check' });
