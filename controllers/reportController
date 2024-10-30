@@ -1,0 +1,28 @@
+const Report = require('../models/Report');
+
+// Controller function for fetching branch transactions within a time range
+exports.getTransactionReport = async (req, res) => {
+  const emp_id = req.user.id; 
+  const { start_date, end_date } = req.query; 
+
+  try {
+    const transactions = await Report.getBranchTransactions(emp_id, start_date, end_date);
+    res.status(200).json(transactions);
+  } catch (error) {
+    console.error('Error fetching transaction report:', error);
+    res.status(500).json({ message: 'Error fetching transaction report', error: error.message });
+  }
+};
+
+// Controller function for fetching late loan installments
+exports.getLateLoanReport = async (req, res) => {
+    const emp_id = req.user.id; 
+  
+    try {
+      const installments = await Report.getLateLoanInstallments(emp_id);
+      res.status(200).json(installments);
+    } catch (error) {
+      console.error('Error fetching late loan report:', error);
+      res.status(500).json({ message: 'Error fetching late loan report', error: error.message });
+    }
+  };
