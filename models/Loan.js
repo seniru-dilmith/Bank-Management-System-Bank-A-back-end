@@ -18,8 +18,15 @@ class Loan {
 
     // Method to request a loan by calling the stored procedure
     static async requestLoan({ customerId, loanType, amount, duration }) {
-        const query = `CALL RequestLoan(?, ?, ?, ?);`;
-        await db.query(query, [customerId, loanType, amount, duration]);
+        try {
+            db.query('START TRANSACTION');
+            const query = `CALL RequestLoan(?, ?, ?, ?);`;
+            await db.query(query, [customerId, loanType, amount, duration]);
+            db.query('COMMIT');
+        } catch (error) {
+            console.error('Error requesting loan:', error.message);
+            db.query('ROLLBACK');
+        }
     }
 
     // Method to get details of a specific loan application by loan ID and customer ID
@@ -31,12 +38,20 @@ class Loan {
 
     // Method for an employee to submit a loan request
     static async requestLoanByEmployee({ customerId, loanAmount, loanTerm, interestRate, branchId, typeId }) {
-        const query = `
+        try{
+            db.query('START TRANSACTION');
+            const query = `
             INSERT INTO loan (customer_id, loan_amount, loan_term, interest_rate, status, branch_id, type_id)
             VALUES (?, ?, ?, ?, 'pending', ?, ?)
         `;
         const [result] = await db.query(query, [customerId, loanAmount, loanTerm, interestRate, branchId, typeId]);
+        db.query('COMMIT');
         return result;
+        
+        } catch (error) {
+            console.error('Error requesting loan:', error.message);
+            db.query('ROLLBACK');
+        }
     }
     
     static async types() {
