@@ -87,6 +87,7 @@ CREATE TABLE `account` (
   `acc_balance` DECIMAL(15,2),
   `branch_id` INT,
   CHECK (`withdrawals_used` BETWEEN 0 AND 5),
+  CHECK (`acc_balance` >= 0),
   PRIMARY KEY (`account_number`)
 );
 
